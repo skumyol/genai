@@ -162,10 +162,6 @@ backend/metrics/plots/academic_avg_ttr.png
 backend/metrics/plots/academic_avg_unique_message_ratio.png
 backend/metrics/plots/academic_comprehensive_analysis.png
 backend/metrics/test_fixed_analysis/detailed_analysis.json
-public/questionnaire_final_compare.csv
-public/questionnaire_pre_game.csv
-public/questionnaire_session_1.csv
-public/questionnaire_session_2.csv
 backend/tools/checkpoints_parsed.sql
 backend/tools/combine_logs.py
 backend/tools/complete_game_data_with_reputation_and_new_npcs.json

@@ -1,0 +1,6 @@
+"Question Type","Question Text","Choices","Question Name"
+"MC","Consent Statement: By selecting 'I agree,' I confirm that I am at least 18 years of age and consent to participate in this study.","I agree.","consent"
+"MC","How often do you play narrative-driven video games (e.g., RPGs, visual novels)?","Never,Rarely,Sometimes,Often,Very Often","gaming_frequency"
+"MC","On a scale of 1 to 7, how important is character realism to your enjoyment of a narrative game?","1 (Not at all important) | 2 | 3 | 4 (Neutral) | 5 | 6 | 7 (Extremely important)","realism_importance"
+"MC","What is your age range?","18-24,25-34,35-44,45-54,55-64,65+","age"
+"MC","How would you describe your gender?","Male,Female,Non-binary,Prefer not to say","gender"
