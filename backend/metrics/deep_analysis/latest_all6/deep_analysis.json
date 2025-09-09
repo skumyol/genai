@@ -1,0 +1,860 @@
+{
+  "generated_at": "2025-09-09T09:12:14.450253",
+  "filters": {
+    "experiment": null
+  },
+  "logs_context": {
+    "total_backoff_seconds": 957.6800000000001,
+    "timeout_events": 3159
+  },
+  "groups": {
+    "exp_mixed_social_1b_game_8b:mixed_rep_off": {
+      "sessions": 1,
+      "avg_latency_all": 42.115304196718725,
+      "avg_latency_pure": 22.209482758539814,
+      "pure_calls": 5042.0,
+      "total_calls": 5236.0,
+      "tokens_per_sec_pure": 385.56528160141823,
+      "overhead_latency_delta": 558.7820871378993,
+      "ttr": 0.015714334456017897,
+      "distinct_1": 0.015714334456017897,
+      "distinct_2": 0.07748134973568499,
+      "avg_message_len": 401.9585906284054,
+      "message_count": 2753.0
+    },
+    "exp_mixed_social_1b_game_8b:mixed_rep_on": {
+      "sessions": 1,
+      "avg_latency_all": 10.282335268171192,
+      "avg_latency_pure": 3.5220159145285717,
+      "pure_calls": 1866.0,
+      "total_calls": 2673.0,
+      "tokens_per_sec_pure": 2206.314630522524,
+      "overhead_latency_delta": 24.71182625551591,
+      "ttr": 0.05482243220698237,
+      "distinct_1": 0.05482243220698237,
+      "distinct_2": 0.23102388934868912,
+      "avg_message_len": 216.88804347826087,
+      "message_count": 1840.0
+    },
+    "exp_gpt5_all:gpt5_rep_on": {
+      "sessions": 1,
+      "avg_latency_all": 3.83861509773571,
+      "avg_latency_pure": 3.403409800507921,
+      "pure_calls": 2433.0,
+      "total_calls": 2530.0,
+      "tokens_per_sec_pure": 3976.4302552056015,
+      "overhead_latency_delta": 11.430242250619765,
+      "ttr": 0.0033333333333333335,
+      "distinct_1": 0.0033333333333333335,
+      "distinct_2": 0.005411670663469224,
+      "avg_message_len": 83.18888888888888,
+      "message_count": 9000.0
+    },
+    "exp_gpt5_all:gpt5_rep_off": {
+      "sessions": 1,
+      "avg_latency_all": 6.457555707590818,
+      "avg_latency_pure": 4.199510831632696,
+      "pure_calls": 3954.0,
+      "total_calls": 3986.0,
+      "tokens_per_sec_pure": 4657.484546987815,
+      "overhead_latency_delta": 274.2996676935406,
+      "ttr": 0.0008449197860962567,
+      "distinct_1": 0.0008449197860962567,
+      "distinct_2": 0.001242603550295858,
+      "avg_message_len": 54.0,
+      "message_count": 9000.0
+    },
+    "exp_qwen8b_all:qwen8b_rep_on": {
+      "sessions": 1,
+      "avg_latency_all": 6.176874527205592,
+      "avg_latency_pure": 5.5152607057733976,
+      "pure_calls": 2241.0,
+      "total_calls": 2300.0,
+      "tokens_per_sec_pure": 4040.6515582316606,
+      "overhead_latency_delta": 25.79172524227198,
+      "ttr": 0.021357204321636868,
+      "distinct_1": 0.021357204321636868,
+      "distinct_2": 0.09001304724134813,
+      "avg_message_len": 72.80418463504232,
+      "message_count": 6261.0
+    },
+    "exp_qwen8b_all:qwen8b_rep_off": {
+      "sessions": 1,
+      "avg_latency_all": 9.414339304785791,
+      "avg_latency_pure": 5.837712265394784,
+      "pure_calls": 2288.0,
+      "total_calls": 2339.0,
+      "tokens_per_sec_pure": 4457.6299466219425,
+      "overhead_latency_delta": 164.03393421834446,
+      "ttr": 0.022690536460398304,
+      "distinct_1": 0.022690536460398304,
+      "distinct_2": 0.09494850852272728,
+      "avg_message_len": 64.1167777104785,
+      "message_count": 8255.0
+    }
+  },
+  "sessions": {
+    "exp_mixed_social_1b_game_8b_mixed_rep_off": {
+      "session_id": "exp_mixed_social_1b_game_8b_mixed_rep_off",
+      "experiment": "exp_mixed_social_1b_game_8b",
+      "variant": "mixed_rep_off",
+      "created_at": "2025-09-07T03:21:32.227176",
+      "total_calls": 5236,
+      "avg_latency_all": 42.115304196718725,
+      "avg_latency_pure": 22.209482758539814,
+      "pure_calls": 5042,
+      "retried_calls": 148,
+      "fallback_calls": 51,
+      "tokens_per_sec_pure": 385.56528160141823,
+      "tokens_per_sec_all": 203.74300026040316,
+      "overhead_latency_delta": 558.7820871378993,
+      "by_agent": {
+        "lifecycle_agent": {
+          "calls": 14,
+          "avg_latency_all": 3.2532133885792325,
+          "avg_latency_pure": 3.2532133885792325,
+          "tps_pure": 1383.291631880377,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "schedule_agent": {
+          "calls": 215,
+          "avg_latency_all": 2.0743428174839464,
+          "avg_latency_pure": 2.0743428174839464,
+          "tps_pure": 310.05168622619465,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "npc_agent": {
+          "calls": 2454,
+          "avg_latency_all": 9.740060312337961,
+          "avg_latency_pure": 5.306708889695787,
+          "tps_pure": 2252.411389967345,
+          "pure_ratio": 0.9881825590872045,
+          "retried_ratio": 0.011817440912795437,
+          "fallback_ratio": 0.0
+        },
+        "social_stance_agent": {
+          "calls": 598,
+          "avg_latency_all": 0.0002455878815922051,
+          "avg_latency_pure": 0.0002455878815922051,
+          "tps_pure": 1959614.301664659,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "session_summarizer": {
+          "calls": 181,
+          "avg_latency_all": 95.66280098251217,
+          "avg_latency_pure": 55.901990784539116,
+          "tps_pure": 133.36938328052761,
+          "pure_ratio": 0.9447513812154696,
+          "retried_ratio": 0.04419889502762431,
+          "fallback_ratio": 0.011049723756906077
+        },
+        "day_summarizer": {
+          "calls": 1619,
+          "avg_latency_all": 108.78873731310976,
+          "avg_latency_pure": 60.07625180913839,
+          "tps_pure": 133.22153036553192,
+          "pure_ratio": 0.9054972205064855,
+          "retried_ratio": 0.06732550957381099,
+          "fallback_ratio": 0.030265596046942556
+        },
+        "memory_summarizer": {
+          "calls": 155,
+          "avg_latency_all": 17.277525967936363,
+          "avg_latency_pure": 6.462365228366228,
+          "tps_pure": 700.7693454251407,
+          "pure_ratio": 0.9870967741935484,
+          "retried_ratio": 0.012903225806451613,
+          "fallback_ratio": 0.0
+        }
+      },
+      "by_model": {
+        "openrouter/qwen/qwen3-8b": {
+          "calls": 4587,
+          "avg_latency_all": 37.80962480130683,
+          "avg_latency_pure": 25.198034475023526,
+          "tps_pure": 382.9957584032313,
+          "pure_ratio": 0.9688249400479616,
+          "retried_ratio": 0.03117505995203837,
+          "fallback_ratio": 0.0
+        },
+        "test/test": {
+          "calls": 598,
+          "avg_latency_all": 0.0002455878815922051,
+          "avg_latency_pure": 0.0002455878815922051,
+          "tps_pure": 1959614.301664659,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "openrouter/openai/gpt-oss-20b:free": {
+          "calls": 22,
+          "avg_latency_all": 932.4764553850347,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 1.0
+        },
+        "openrouter/deepseek/deepseek-r1-distill-llama-70b:free": {
+          "calls": 2,
+          "avg_latency_all": 1963.2490659952164,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 1.0,
+          "fallback_ratio": 1.0
+        },
+        "openrouter/meta-llama/llama-3.2-3b-instruct:free": {
+          "calls": 27,
+          "avg_latency_all": 838.5872888300154,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.1111111111111111,
+          "fallback_ratio": 1.0
+        }
+      },
+      "message_count": 2753,
+      "unique_speakers": 10,
+      "avg_messages_per_dialogue": 9.207357859531772,
+      "ttr": 0.015714334456017897,
+      "uniq_message_ratio": 0.9705775517617145,
+      "avg_message_len": 401.9585906284054,
+      "vocab_richness": 0.6604536184486509,
+      "mtld": 1.3581458063064293,
+      "distinct_1": 0.015714334456017897,
+      "distinct_2": 0.07748134973568499,
+      "total_words": 205163,
+      "unique_words": 3224
+    },
+    "exp_mixed_social_1b_game_8b_mixed_rep_on": {
+      "session_id": "exp_mixed_social_1b_game_8b_mixed_rep_on",
+      "experiment": "exp_mixed_social_1b_game_8b",
+      "variant": "mixed_rep_on",
+      "created_at": "2025-09-06T19:17:36.786015",
+      "total_calls": 2673,
+      "avg_latency_all": 10.282335268171192,
+      "avg_latency_pure": 3.5220159145285717,
+      "pure_calls": 1866,
+      "retried_calls": 443,
+      "fallback_calls": 663,
+      "tokens_per_sec_pure": 2206.314630522524,
+      "tokens_per_sec_all": 1777.6443145517317,
+      "overhead_latency_delta": 24.71182625551591,
+      "by_agent": {
+        "lifecycle_agent": {
+          "calls": 20,
+          "avg_latency_all": 3.79350882768631,
+          "avg_latency_pure": 3.79350882768631,
+          "tps_pure": 2464.3675353463677,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "schedule_agent": {
+          "calls": 185,
+          "avg_latency_all": 3.290470355265849,
+          "avg_latency_pure": 3.14978259736365,
+          "tps_pure": 2570.362292419417,
+          "pure_ratio": 0.9837837837837838,
+          "retried_ratio": 0.016216216216216217,
+          "fallback_ratio": 0.0
+        },
+        "npc_agent": {
+          "calls": 1636,
+          "avg_latency_all": 15.278606654962292,
+          "avg_latency_pure": 5.827500567915877,
+          "tps_pure": 2466.277635158885,
+          "pure_ratio": 0.5165036674816625,
+          "retried_ratio": 0.26466992665036676,
+          "fallback_ratio": 0.39975550122249387
+        },
+        "social_stance_agent": {
+          "calls": 408,
+          "avg_latency_all": 0.0001607198341220033,
+          "avg_latency_pure": 0.0001607198341220033,
+          "tps_pure": 2992541.567387542,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "reputation_agent": {
+          "calls": 408,
+          "avg_latency_all": 2.1569203973985185,
+          "avg_latency_pure": 2.1140272988213433,
+          "tps_pure": 391.27471653745624,
+          "pure_ratio": 0.9926470588235294,
+          "retried_ratio": 0.007352941176470588,
+          "fallback_ratio": 0.0
+        },
+        "session_summarizer": {
+          "calls": 4,
+          "avg_latency_all": 81.98096191883087,
+          "avg_latency_pure": 56.90237212181091,
+          "tps_pure": 503.98601904695647,
+          "pure_ratio": 0.25,
+          "retried_ratio": 0.25,
+          "fallback_ratio": 0.75
+        },
+        "memory_summarizer": {
+          "calls": 6,
+          "avg_latency_all": 45.02682018280029,
+          "avg_latency_pure": 13.906379063924154,
+          "tps_pure": 1932.254725917431,
+          "pure_ratio": 0.5,
+          "retried_ratio": 0.16666666666666666,
+          "fallback_ratio": 0.5
+        },
+        "day_summarizer": {
+          "calls": 6,
+          "avg_latency_all": 54.350104570388794,
+          "avg_latency_pure": 21.922484159469604,
+          "tps_pure": 1244.3617156505682,
+          "pure_ratio": 0.3333333333333333,
+          "retried_ratio": 0.3333333333333333,
+          "fallback_ratio": 0.5
+        }
+      },
+      "by_model": {
+        "openrouter/qwen/qwen3-8b": {
+          "calls": 1602,
+          "avg_latency_all": 5.930394812767276,
+          "avg_latency_pure": 4.507555639792862,
+          "tps_pure": 2176.477922861014,
+          "pure_ratio": 0.9101123595505618,
+          "retried_ratio": 0.0898876404494382,
+          "fallback_ratio": 0.0
+        },
+        "test/test": {
+          "calls": 408,
+          "avg_latency_all": 0.0001607198341220033,
+          "avg_latency_pure": 0.0001607198341220033,
+          "tps_pure": 2992541.567387542,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "openrouter/meta-llama/llama-3.2-3b-instruct:free": {
+          "calls": 643,
+          "avg_latency_all": 26.376049382875717,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.45878693623639194,
+          "fallback_ratio": 1.0
+        },
+        "openrouter/openai/gpt-oss-20b:free": {
+          "calls": 19,
+          "avg_latency_all": 50.57044110800091,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.15789473684210525,
+          "fallback_ratio": 1.0
+        },
+        "openrouter/meta-llama/llama-3.3-70b-instruct:free": {
+          "calls": 1,
+          "avg_latency_all": 63.485973834991455,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 1.0,
+          "fallback_ratio": 1.0
+        }
+      },
+      "message_count": 1840,
+      "unique_speakers": 6,
+      "avg_messages_per_dialogue": 9.019607843137255,
+      "ttr": 0.05482243220698237,
+      "uniq_message_ratio": 0.8744565217391305,
+      "avg_message_len": 216.88804347826087,
+      "vocab_richness": 0.7407439264340151,
+      "mtld": 1.329160827575792,
+      "distinct_1": 0.05482243220698237,
+      "distinct_2": 0.23102388934868912,
+      "total_words": 73127,
+      "unique_words": 4009
+    },
+    "exp_gpt5_all_gpt5_rep_on": {
+      "session_id": "exp_gpt5_all_gpt5_rep_on",
+      "experiment": "exp_gpt5_all",
+      "variant": "gpt5_rep_on",
+      "created_at": "2025-09-04T08:00:00",
+      "total_calls": 2530,
+      "avg_latency_all": 3.83861509773571,
+      "avg_latency_pure": 3.403409800507921,
+      "pure_calls": 2433,
+      "retried_calls": 12,
+      "fallback_calls": 86,
+      "tokens_per_sec_pure": 3976.4302552056015,
+      "tokens_per_sec_all": 3547.3464470273975,
+      "overhead_latency_delta": 11.430242250619765,
+      "by_agent": {
+        "lifecycle_agent": {
+          "calls": 19,
+          "avg_latency_all": 6.432309251082571,
+          "avg_latency_pure": 5.030455378925099,
+          "tps_pure": 2316.1158919867844,
+          "pure_ratio": 0.8947368421052632,
+          "retried_ratio": 0.05263157894736842,
+          "fallback_ratio": 0.10526315789473684
+        },
+        "schedule_agent": {
+          "calls": 170,
+          "avg_latency_all": 3.8604295071433574,
+          "avg_latency_pure": 2.962550401687622,
+          "tps_pure": 1813.0087734778103,
+          "pure_ratio": 0.9058823529411765,
+          "retried_ratio": 0.0058823529411764705,
+          "fallback_ratio": 0.08823529411764706
+        },
+        "npc_agent": {
+          "calls": 1618,
+          "avg_latency_all": 4.797452679523284,
+          "avg_latency_pure": 4.3180222402150825,
+          "tps_pure": 4690.038642779267,
+          "pure_ratio": 0.9585908529048207,
+          "retried_ratio": 0.006180469715698393,
+          "fallback_ratio": 0.03522867737948084
+        },
+        "social_stance_agent": {
+          "calls": 360,
+          "avg_latency_all": 0.0001773132218254937,
+          "avg_latency_pure": 0.0001773132218254937,
+          "tps_pure": 2713935.609044798,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "reputation_agent": {
+          "calls": 360,
+          "avg_latency_all": 2.748809027671814,
+          "avg_latency_pure": 2.4716477784617195,
+          "tps_pure": 264.7461345845777,
+          "pure_ratio": 0.9666666666666667,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.03333333333333333
+        },
+        "session_summarizer": {
+          "calls": 3,
+          "avg_latency_all": 60.43192903200785,
+          "avg_latency_pure": 60.43192903200785,
+          "tps_pure": 497.88250155085814,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        }
+      },
+      "by_model": {
+        "openrouter/openai/gpt-5-chat": {
+          "calls": 2084,
+          "avg_latency_all": 4.041300650635974,
+          "avg_latency_pure": 3.9944197838282274,
+          "tps_pure": 3955.5395372990733,
+          "pure_ratio": 0.994721689059501,
+          "retried_ratio": 0.00527831094049904,
+          "fallback_ratio": 0.0
+        },
+        "test/test": {
+          "calls": 360,
+          "avg_latency_all": 0.0001773132218254937,
+          "avg_latency_pure": 0.0001773132218254937,
+          "tps_pure": 2713935.609044798,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "openrouter/meta-llama/llama-3.2-3b-instruct:free": {
+          "calls": 85,
+          "avg_latency_all": 14.748959039239322,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.011764705882352941,
+          "fallback_ratio": 1.0
+        },
+        "openrouter/openai/gpt-oss-20b:free": {
+          "calls": 1,
+          "avg_latency_all": 35.9002902507782,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 1.0
+        }
+      },
+      "message_count": 9000,
+      "unique_speakers": 9,
+      "avg_messages_per_dialogue": 180.0,
+      "ttr": 0.0033333333333333335,
+      "uniq_message_ratio": 0.006222222222222222,
+      "avg_message_len": 83.18888888888888,
+      "vocab_richness": 0.5168882178491068,
+      "mtld": 1.6876812939195294,
+      "distinct_1": 0.0033333333333333335,
+      "distinct_2": 0.005411670663469224,
+      "total_words": 134100,
+      "unique_words": 447
+    },
+    "exp_gpt5_all_gpt5_rep_off": {
+      "session_id": "exp_gpt5_all_gpt5_rep_off",
+      "experiment": "exp_gpt5_all",
+      "variant": "gpt5_rep_off",
+      "created_at": "2025-09-04T08:00:00",
+      "total_calls": 3986,
+      "avg_latency_all": 6.457555707590818,
+      "avg_latency_pure": 4.199510831632696,
+      "pure_calls": 3954,
+      "retried_calls": 31,
+      "fallback_calls": 2,
+      "tokens_per_sec_pure": 4657.484546987815,
+      "tokens_per_sec_all": 3036.5237191385672,
+      "overhead_latency_delta": 274.2996676935406,
+      "by_agent": {
+        "lifecycle_agent": {
+          "calls": 10,
+          "avg_latency_all": 3.260005974769592,
+          "avg_latency_pure": 3.260005974769592,
+          "tps_pure": 3982.2933149432497,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "schedule_agent": {
+          "calls": 240,
+          "avg_latency_all": 2.9281682749589284,
+          "avg_latency_pure": 2.9281682749589284,
+          "tps_pure": 2075.348908497607,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "npc_agent": {
+          "calls": 3017,
+          "avg_latency_all": 7.123361628696466,
+          "avg_latency_pure": 4.826999158824145,
+          "tps_pure": 5150.593808538123,
+          "pure_ratio": 0.9903878024527677,
+          "retried_ratio": 0.009280742459396751,
+          "fallback_ratio": 0.0006629101756711965
+        },
+        "social_stance_agent": {
+          "calls": 676,
+          "avg_latency_all": 0.00019545632706591363,
+          "avg_latency_pure": 0.00019545632706591363,
+          "tps_pure": 2464525.491821353,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "session_summarizer": {
+          "calls": 8,
+          "avg_latency_all": 55.29113748669624,
+          "avg_latency_pure": 51.641821588788716,
+          "tps_pure": 569.704369896947,
+          "pure_ratio": 0.875,
+          "retried_ratio": 0.125,
+          "fallback_ratio": 0.0
+        },
+        "day_summarizer": {
+          "calls": 28,
+          "avg_latency_all": 70.05697013650622,
+          "avg_latency_pure": 36.941645286701345,
+          "tps_pure": 775.6256838729289,
+          "pure_ratio": 0.9642857142857143,
+          "retried_ratio": 0.03571428571428571,
+          "fallback_ratio": 0.0
+        },
+        "memory_summarizer": {
+          "calls": 7,
+          "avg_latency_all": 158.45973982129777,
+          "avg_latency_pure": 14.563765605290731,
+          "tps_pure": 1785.3784548611093,
+          "pure_ratio": 0.8571428571428571,
+          "retried_ratio": 0.14285714285714285,
+          "fallback_ratio": 0.0
+        }
+      },
+      "by_model": {
+        "openrouter/openai/gpt-5-chat": {
+          "calls": 3308,
+          "avg_latency_all": 7.752111637462583,
+          "avg_latency_pure": 5.065507535020923,
+          "tps_pure": 4637.910694161518,
+          "pure_ratio": 0.9909310761789601,
+          "retried_ratio": 0.009068923821039904,
+          "fallback_ratio": 0.0
+        },
+        "test/test": {
+          "calls": 676,
+          "avg_latency_all": 0.00019545632706591363,
+          "avg_latency_pure": 0.00019545632706591363,
+          "tps_pure": 2464525.491821353,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "openrouter/openai/gpt-oss-20b:free": {
+          "calls": 2,
+          "avg_latency_all": 47.849812626838684,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.5,
+          "fallback_ratio": 1.0
+        }
+      },
+      "message_count": 9000,
+      "unique_speakers": 9,
+      "avg_messages_per_dialogue": 180.0,
+      "ttr": 0.0008449197860962567,
+      "uniq_message_ratio": 0.0036666666666666666,
+      "avg_message_len": 54.0,
+      "vocab_richness": 0.38175397497258085,
+      "mtld": 3.705365496812584,
+      "distinct_1": 0.0008449197860962567,
+      "distinct_2": 0.001242603550295858,
+      "total_words": 93500,
+      "unique_words": 79
+    },
+    "exp_qwen8b_all_qwen8b_rep_on": {
+      "session_id": "exp_qwen8b_all_qwen8b_rep_on",
+      "experiment": "exp_qwen8b_all",
+      "variant": "qwen8b_rep_on",
+      "created_at": "2025-09-04T08:00:00",
+      "total_calls": 2300,
+      "avg_latency_all": 6.176874527205592,
+      "avg_latency_pure": 5.5152607057733976,
+      "pure_calls": 2241,
+      "retried_calls": 17,
+      "fallback_calls": 42,
+      "tokens_per_sec_pure": 4040.6515582316606,
+      "tokens_per_sec_all": 3602.881358353323,
+      "overhead_latency_delta": 25.79172524227198,
+      "by_agent": {
+        "lifecycle_agent": {
+          "calls": 18,
+          "avg_latency_all": 4.952203883065118,
+          "avg_latency_pure": 4.781475922640632,
+          "tps_pure": 3934.079390274224,
+          "pure_ratio": 0.9444444444444444,
+          "retried_ratio": 0.05555555555555555,
+          "fallback_ratio": 0.0
+        },
+        "schedule_agent": {
+          "calls": 180,
+          "avg_latency_all": 2.487459354930454,
+          "avg_latency_pure": 2.3132103061676026,
+          "tps_pure": 2795.4545544229304,
+          "pure_ratio": 0.9722222222222222,
+          "retried_ratio": 0.016666666666666666,
+          "fallback_ratio": 0.011111111111111112
+        },
+        "npc_agent": {
+          "calls": 1428,
+          "avg_latency_all": 8.111627996802664,
+          "avg_latency_pure": 7.962727430143143,
+          "tps_pure": 4312.9017116841815,
+          "pure_ratio": 0.9726890756302521,
+          "retried_ratio": 0.008403361344537815,
+          "fallback_ratio": 0.018907563025210083
+        },
+        "social_stance_agent": {
+          "calls": 330,
+          "avg_latency_all": 0.00015817411018140387,
+          "avg_latency_pure": 0.00015817411018140387,
+          "tps_pure": 3039113.6094129686,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "reputation_agent": {
+          "calls": 330,
+          "avg_latency_all": 2.0510637557867804,
+          "avg_latency_pure": 1.6217691238571263,
+          "tps_pure": 522.1877220810308,
+          "pure_ratio": 0.9636363636363636,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.03636363636363636
+        },
+        "day_summarizer": {
+          "calls": 6,
+          "avg_latency_all": 26.129581332206726,
+          "avg_latency_pure": 26.129581332206726,
+          "tps_pure": 1138.6775122184447,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "session_summarizer": {
+          "calls": 3,
+          "avg_latency_all": 323.55027810732525,
+          "avg_latency_pure": 45.526578068733215,
+          "tps_pure": 676.176451336277,
+          "pure_ratio": 0.6666666666666666,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.3333333333333333
+        },
+        "memory_summarizer": {
+          "calls": 5,
+          "avg_latency_all": 56.438544034957886,
+          "avg_latency_pure": 12.442130982875824,
+          "tps_pure": 2413.573690980304,
+          "pure_ratio": 0.8,
+          "retried_ratio": 0.2,
+          "fallback_ratio": 0.0
+        }
+      },
+      "by_model": {
+        "openrouter/qwen/qwen3-8b": {
+          "calls": 1928,
+          "avg_latency_all": 6.643399049261299,
+          "avg_latency_pure": 6.467633199467202,
+          "tps_pure": 4027.833790240365,
+          "pure_ratio": 0.9911825726141079,
+          "retried_ratio": 0.008817427385892116,
+          "fallback_ratio": 0.0
+        },
+        "test/test": {
+          "calls": 330,
+          "avg_latency_all": 0.00015817411018140387,
+          "avg_latency_pure": 0.00015817411018140387,
+          "tps_pure": 3039113.6094129686,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "local/hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M": {
+          "calls": 42,
+          "avg_latency_all": 33.29252019382658,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 1.0
+        }
+      },
+      "message_count": 6261,
+      "unique_speakers": 6,
+      "avg_messages_per_dialogue": 16.053846153846155,
+      "ttr": 0.021357204321636868,
+      "uniq_message_ratio": 0.3836447851780866,
+      "avg_message_len": 72.80418463504232,
+      "vocab_richness": 0.6606544644098102,
+      "mtld": 1.4667725619120013,
+      "distinct_1": 0.021357204321636868,
+      "distinct_2": 0.09001304724134813,
+      "total_words": 83672,
+      "unique_words": 1787
+    },
+    "exp_qwen8b_all_qwen8b_rep_off": {
+      "session_id": "exp_qwen8b_all_qwen8b_rep_off",
+      "experiment": "exp_qwen8b_all",
+      "variant": "qwen8b_rep_off",
+      "created_at": "2025-09-04T08:00:00",
+      "total_calls": 2339,
+      "avg_latency_all": 9.414339304785791,
+      "avg_latency_pure": 5.837712265394784,
+      "pure_calls": 2288,
+      "retried_calls": 21,
+      "fallback_calls": 30,
+      "tokens_per_sec_pure": 4457.6299466219425,
+      "tokens_per_sec_all": 2785.402001065955,
+      "overhead_latency_delta": 164.03393421834446,
+      "by_agent": {
+        "lifecycle_agent": {
+          "calls": 20,
+          "avg_latency_all": 5.075492572784424,
+          "avg_latency_pure": 4.013783392153289,
+          "tps_pure": 3537.3109639539243,
+          "pure_ratio": 0.95,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.05
+        },
+        "schedule_agent": {
+          "calls": 190,
+          "avg_latency_all": 3.6333049548299687,
+          "avg_latency_pure": 3.1818180802047893,
+          "tps_pure": 4043.1777020861277,
+          "pure_ratio": 0.9789473684210527,
+          "retried_ratio": 0.021052631578947368,
+          "fallback_ratio": 0.0
+        },
+        "npc_agent": {
+          "calls": 1731,
+          "avg_latency_all": 12.226147061479635,
+          "avg_latency_pure": 7.491848271961382,
+          "tps_pure": 4485.39250914338,
+          "pure_ratio": 0.9734257654534951,
+          "retried_ratio": 0.009820912767186597,
+          "fallback_ratio": 0.016753321779318313
+        },
+        "social_stance_agent": {
+          "calls": 396,
+          "avg_latency_all": 0.00015239282087846235,
+          "avg_latency_pure": 0.00015239282087846235,
+          "tps_pure": 3154029.9102071775,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "session_summarizer": {
+          "calls": 2,
+          "avg_latency_all": 32.39046502113342,
+          "avg_latency_pure": 32.39046502113342,
+          "tps_pure": 983.2831970525851,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        }
+      },
+      "by_model": {
+        "openrouter/qwen/qwen3-8b": {
+          "calls": 1913,
+          "avg_latency_all": 7.197258184794911,
+          "avg_latency_pure": 7.059527122445137,
+          "tps_pure": 4443.39963107214,
+          "pure_ratio": 0.989022477783586,
+          "retried_ratio": 0.01097752221641401,
+          "fallback_ratio": 0.0
+        },
+        "test/test": {
+          "calls": 396,
+          "avg_latency_all": 0.00015239282087846235,
+          "avg_latency_pure": 0.00015239282087846235,
+          "tps_pure": 3154029.9102071775,
+          "pure_ratio": 1.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 0.0
+        },
+        "local/hf.co/unsloth/Qwen3-8B-GGUF:Q4_K_M": {
+          "calls": 30,
+          "avg_latency_all": 275.05747929414116,
+          "avg_latency_pure": 0.0,
+          "tps_pure": 0.0,
+          "pure_ratio": 0.0,
+          "retried_ratio": 0.0,
+          "fallback_ratio": 1.0
+        }
+      },
+      "message_count": 8255,
+      "unique_speakers": 7,
+      "avg_messages_per_dialogue": 20.03640776699029,
+      "ttr": 0.022690536460398304,
+      "uniq_message_ratio": 0.34282253179890976,
+      "avg_message_len": 64.1167777104785,
+      "vocab_richness": 0.6706980131458501,
+      "mtld": 1.4475304793035249,
+      "distinct_1": 0.022690536460398304,
+      "distinct_2": 0.09494850852272728,
+      "total_words": 98367,
+      "unique_words": 2232
+    }
+  }
+}

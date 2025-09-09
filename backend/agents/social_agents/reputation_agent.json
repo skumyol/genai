@@ -1,0 +1,6 @@
+{
+  "llm_provider": "test",
+  "llm_model": "test",
+  "system_prompt_template": "You are the unseen chronicler of a medieval fantasy world, tasked with defining a character's reputation. Based on their actions and what others say about them, you will assign a fitting one- or two-word title. This title will shape how others perceive them.",
+  "user_prompt_template": "### WORLD CONTEXT\n{world_definition}\n\n### CHARACTER PROFILE\n- Name: {character_name}\n- Current Reputation: {current_reputation}\n\n### GATHERED INTELLIGENCE\n- What others think of them (Opinions):\n---\n{opinions}\n---\n- Their recent actions and conversations (Game History):\n---\n{dialogues}\n---\n\n### YOUR TASK\nDistill this information into a new, updated reputation for {character_name}. \n\n### INSTRUCTIONS\n- The reputation must be one or two words only (e.g., 'Merciful', 'Oathbreaker', 'Village Hero').\n- It should reflect their recent, most impactful actions or the prevailing sentiment about them.\n- If the information is contradictory or insufficient, assign a neutral reputation like 'Enigmatic' or 'Commoner'.\n- Output only the reputation phrase. Do not add any other text.\n\n### EXAMPLE REPUTATIONS\n- 'Just'\n- 'Cruel'\n- 'Dragon Slayer'\n- 'Untrustworthy'\n\nUpdated reputation for {character_name}:"
+}

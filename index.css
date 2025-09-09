@@ -1,0 +1,321 @@
+/* Google Fonts for Medieval Theme */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600;700&display=swap');
+
+/* Tailwind CSS */
+@import "tailwindcss";
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  margin: auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Improve text contrast */
+body {
+  color: #FFFFFF;
+}
+
+/* Reduce card padding for better space utilization */
+.MuiCard-root {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+.MuiCardContent-root {
+  padding: 12px !important;
+}
+
+.MuiCardContent-root:last-child {
+  padding-bottom: 12px !important;
+}
+
+.MuiCardHeader-root {
+  padding: 12px !important;
+}
+
+/* Improve text visibility */
+.MuiTypography-root {
+  color: inherit;
+}
+
+.MuiTypography-colorTextSecondary {
+  color: #E0E0E0 !important;
+}
+
+/* Better contrast for form elements */
+.MuiTextField-root .MuiInputBase-input {
+  color: #FFFFFF;
+}
+
+.MuiTextField-root .MuiInputLabel-root {
+  color: #E0E0E0;
+}
+
+.MuiTextField-root .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.MuiTextField-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Better chip visibility */
+.MuiChip-root {
+  color: #FFFFFF;
+}
+
+.MuiChip-outlined {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Custom utilities for medieval theme */
+.medieval-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mui-palette-primary-main) var(--mui-palette-background-paper);
+}
+
+.medieval-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+  
+.medieval-scroll::-webkit-scrollbar-track {
+  background: var(--mui-palette-background-paper);
+  border-radius: 4px;
+}
+  
+.medieval-scroll::-webkit-scrollbar-thumb {
+  background: var(--mui-palette-primary-main);
+  border-radius: 4px;
+}
+  
+.medieval-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--mui-palette-primary-dark);
+}
+
+/* Custom animation for status badges */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Medieval-style card shadows */
+.medieval-shadow {
+  box-shadow: 
+    0 4px 8px rgba(139, 69, 19, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Retro game-style borders */
+.retro-border {
+  border: 2px solid var(--mui-palette-primary-main);
+  border-image: linear-gradient(45deg, 
+    var(--mui-palette-primary-main), 
+    var(--mui-palette-secondary-main), 
+    var(--mui-palette-primary-main)
+  ) 1;
+}
+
+/* Responsive grid utilities */
+.responsive-grid {
+  display: grid;
+  gap: 1rem;
+  height: calc(100vh - 120px);
+}
+
+/* Smooth transitions for responsive changes */
+.smooth-resize {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Ensure proper overflow handling */
+.overflow-container {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Game-like animations and effects */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--mui-palette-primary-main);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--mui-palette-primary-main), 0 0 30px var(--mui-palette-primary-main);
+  }
+}
+
+.game-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Enhanced hover effects */
+.game-hover {
+  transition: all 0.3s ease;
+}
+  
+.game-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 69, 19, 0.4);
+}
+
+/* Medieval card styling */
+.medieval-card {
+  background: linear-gradient(135deg, 
+    var(--mui-palette-background-paper) 0%, 
+    rgba(139, 69, 19, 0.1) 100%);
+  border: 1px solid rgba(139, 69, 19, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Status indicator animations */
+@keyframes status-online {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes status-busy {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-online-pulse {
+  animation: status-online 1.5s ease-in-out infinite;
+}
+
+.status-busy-pulse {
+  animation: status-busy 1s ease-in-out infinite;
+}
+
+/* Network diagram animations */
+@keyframes network-pulse {
+  0% {
+    stroke-opacity: 0.7;
+    stroke-width: 2;
+  }
+  50% {
+    stroke-opacity: 1;
+    stroke-width: 4;
+  }
+  100% {
+    stroke-opacity: 0.7;
+    stroke-width: 2;
+  }
+}
+
+.network-connection {
+  animation: network-pulse 2s ease-in-out infinite;
+}
+
+/* Enhanced text effects */
+.medieval-text-glow {
+  text-shadow: 
+    0 0 5px var(--mui-palette-primary-main),
+    0 0 10px var(--mui-palette-primary-main),
+    0 0 15px var(--mui-palette-primary-main);
+}
+
+/* Interactive button effects */
+.game-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.game-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.game-button:hover::before {
+  left: 100%;
+}
+
+/* Agent network specific styles */
+.agent-node-hover {
+  transition: all 0.2s ease;
+}
+
+.agent-node-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(139, 69, 19, 0.4);
+}
+
+.connection-line {
+  transition: all 0.3s ease;
+}
+
+.connection-line:hover {
+  stroke-width: 4;
+  stroke-opacity: 1;
+}
+
+.drag-preview {
+  opacity: 0.8;
+  transform: scale(1.05);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Network canvas grid */
+.network-grid {
+  background-image: 
+    linear-gradient(rgba(139, 69, 19, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 69, 19, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Agent type indicators */
+.agent-type-npc {
+  border-left: 4px solid #8B4513;
+}
+
+.agent-type-opinion {
+  border-left: 4px solid #9C27B0;
+}
+
+.agent-type-reputation {
+  border-left: 4px solid #FF5722;
+}
+
+.agent-type-social {
+  border-left: 4px solid #2196F3;
+}
+
+.agent-type-memory {
+  border-left: 4px solid #4CAF50;
+}
+
+.agent-type-context {
+  border-left: 4px solid #FF9800;
+}

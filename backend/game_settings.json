@@ -1,0 +1,6 @@
+{
+  "databases": {
+    "main": "databases/maingamedata.db",
+    "checkpoints": "databases/checkpoints.db"
+  }
+}
