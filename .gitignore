@@ -247,3 +247,15 @@ backend/metrics/deep_analysis/latest_all6_norm_decomp/plots/plot_overhead_latenc
 backend/metrics/deep_analysis/latest_all6_norm_decomp/plots/plot_sec_per_token.png
 backend/metrics/deep_analysis/latest_all6_norm_decomp/plots/plot_tokens_per_sec_pure.png
 backend/metrics/deep_analysis/latest_all6_norm_decomp/plots/plot_ttr.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_avg_latency_pure.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_avg_message_len.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_distinct_2.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_overhead_latency_delta.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_tokens_per_sec_pure.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_ttr.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_avg_latency_pure.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_avg_message_len.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_distinct_2.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_overhead_latency_delta.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_tokens_per_sec_pure.png
+backend/metrics/deep_analysis/latest_all6/plots/plot_ttr.png
