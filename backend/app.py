@@ -258,6 +258,22 @@ def _get_variant_config(variant_id: Optional[str] = None, source_session_id: Opt
         pass
     return None
 
+def _local_llm_available() -> bool:
+    """Heuristic: consider local LLM available if an endpoint env is configured.
+
+    This avoids blocking checks; if set, we assume operator intends to use local.
+    """
+    try:
+        if os.environ.get('LLM_FORCE_LOCAL', '').lower() in ('1','true','yes','on'):
+            return True
+        if os.environ.get('LLM_LOCAL_ENDPOINTS'):
+            return True
+        if os.environ.get('OLLAMA_BASE_URL') or os.environ.get('OLLAMA_ENDPOINT_QWEN06B') or os.environ.get('OLLAMA_ENDPOINT_QWEN8B'):
+            return True
+    except Exception:
+        pass
+    return False
+
 # Migrate legacy database if needed
 migrate_legacy_database()
 
@@ -1130,6 +1146,29 @@ def handle_chat():
                         for fb in fbs:
                             if isinstance(fb, dict) and fb.get('provider') and fb.get('model'):
                                 fallback_list.append((fb.get('provider'), fb.get('model')))
+                    # Mixed policy: prefer local Qwen if available; otherwise use OpenRouter Qwen8B
+                    try:
+                        # Detect a local Qwen fallback entry to promote
+                        local_qwen = None
+                        for fb in fbs:
+                            if isinstance(fb, dict) and (fb.get('provider') == 'local' or fb.get('provider') == 'ollama'):
+                                if isinstance(fb.get('model'), str) and 'qwen3-8b' in fb.get('model').lower():
+                                    local_qwen = (fb.get('provider'), fb.get('model'))
+                                    break
+                        if local_qwen and _local_llm_available():
+                            # Promote local to primary; demote OpenRouter Qwen to fallback
+                            if (prov or '').lower() == 'openrouter' and isinstance(modl, str) and 'qwen3-8b' in modl.lower():
+                                # Put current openrouter model as first fallback
+                                if (prov, modl) not in fallback_list:
+                                    fallback_list.insert(0, (prov, modl))
+                                prov, modl = local_qwen
+                        else:
+                            # Ensure primary is OpenRouter Qwen8B if no local is available
+                            if not (prov and modl):
+                                prov = 'openrouter'
+                                modl = 'qwen/qwen3-8b'
+                    except Exception:
+                        pass
             except Exception:
                 pass
 

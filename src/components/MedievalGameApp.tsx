@@ -504,6 +504,12 @@ const MedievalGameContent: React.FC = () => {
 
   // Ensure NPCs load whenever the active session changes
   useEffect(() => {
+    // Reset selections and chat when switching sessions so UI reflects the new session
+    setSelectedNPCId(null);
+    setPlayerNpcId(null);
+    setTalkTargetNpcId(null);
+    setMessages([]);
+
     (async () => {
       const sid = sessionId || localStorage.getItem('session_id');
       if (!sid) return;
