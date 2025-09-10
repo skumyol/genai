@@ -223,3 +223,4 @@ backend/tools/generate_synthetic_gpt5_sessions.py
 backend/tools/import_json_to_db.py
 backend/tools
 vite.config.ts
+vite.config.ts
