@@ -794,7 +794,7 @@ class MemoryAgent:
     def get_npc_context(self, npc_name: str, include_recent_dialogues: bool = True) -> str:
         """Get formatted context for an NPC for LLM prompts"""
         if not self.current_session:
-            return ""
+            return f"No active session for NPC {npc_name}"
         
         npc_memory = self.get_npc_memory(npc_name)
         context_parts = []
@@ -818,6 +818,27 @@ class MemoryAgent:
             # Add social stance
             if npc_memory.social_stance:
                 context_parts.append(f"Social stance: {npc_memory.social_stance}")
+        else:
+            # No NPC memory found - provide basic character info from character list as fallback
+            char_data = None
+            try:
+                chars = self.get_character_list() or []
+                for c in chars:
+                    if c.get('name') == npc_name:
+                        char_data = c
+                        break
+                if char_data:
+                    fallback_context = []
+                    if char_data.get('personality'):
+                        fallback_context.append(f"Personality: {char_data['personality']}")
+                    if char_data.get('story'):
+                        fallback_context.append(f"Background: {char_data['story']}")
+                    if char_data.get('role'):
+                        fallback_context.append(f"Role: {char_data['role']}")
+                    if fallback_context:
+                        context_parts.append("Character information (no personal memories yet):\n" + "\n".join(fallback_context))
+            except Exception:
+                pass
         
         # Add recent dialogues if requested
         if include_recent_dialogues:
@@ -830,7 +851,11 @@ class MemoryAgent:
                 if dialogue_summaries:
                     context_parts.append("Recent dialogue summaries:\n" + "\n".join(dialogue_summaries))
         
-        return "\n\n".join(context_parts) if context_parts else f"No context available for {npc_name}"
+        # Return context or fallback message
+        if context_parts:
+            return "\n\n".join(context_parts)
+        else:
+            return f"Limited context available for {npc_name} - starting fresh conversation"
 
     # ============================================================================
     # NPC Data Management (for NPC Agent support)

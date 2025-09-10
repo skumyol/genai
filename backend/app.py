@@ -147,6 +147,117 @@ def load_settings_from_db(name: str = 'current') -> Optional[Dict[str, Any]]:
             pass
     return None
 
+def _resolve_llm_config_for(session, agent_key: str = 'dialogue_agent') -> (Optional[str], Optional[str]):
+    """Resolve LLM provider/model for a given agent based on session and DB settings.
+
+    Precedence:
+      1) session.game_settings.game_agents[agent_key]
+      2) session.game_settings.llm_provider / llm_model
+      3) experimental_config.json via session.game_settings.experiment.variant_id
+      4) DB settings ('current' then 'default'): game_agents[agent_key] or root llm_* keys
+      5) None (caller may fallback further if needed)
+    """
+    prov = None
+    modl = None
+    try:
+        gs = (session.game_settings or {}) if session else {}
+        # 1) From session game_agents
+        try:
+            ga = gs.get('game_agents') or {}
+            cfg = ga.get(agent_key) or {}
+            prov = cfg.get('provider') or prov
+            modl = cfg.get('model') or modl
+        except Exception:
+            pass
+        # 2) Root keys
+        if not (prov and modl):
+            prov = prov or gs.get('llm_provider')
+            modl = modl or gs.get('llm_model')
+        # 3) experimental_config via variant_id (prefer experimental_config_six.json if present)
+        if not (prov and modl):
+            exp = gs.get('experiment') or {}
+            var_id = exp.get('variant_id')
+            src_sid = exp.get('scenario_source_session_id')
+            if var_id:
+                try:
+                    base = os.path.dirname(__file__)
+                    conf = None
+                    for fname in ('experimental_config_six.json', 'experimental_config.json'):
+                        try:
+                            with open(os.path.join(base, fname), 'r', encoding='utf-8') as f:
+                                conf = json.load(f)
+                            break
+                        except Exception:
+                            continue
+                    v = None
+                    if conf:
+                        for _, econf in (conf.get('experiments') or {}).items():
+                            for vv in econf.get('variants', []) or []:
+                                if vv.get('id') == var_id:
+                                    v = vv
+                                    break
+                            if v:
+                                break
+                    if v:
+                        ga2 = (v.get('config') or {}).get('game_agents') or {}
+                        cfg2 = ga2.get(agent_key) or {}
+                        prov = prov or cfg2.get('provider')
+                        modl = modl or cfg2.get('model')
+                except Exception:
+                    pass
+            # If variant id missing or not found, try matching by scenario source session id
+            if not (prov and modl) and src_sid:
+                try:
+                    var_cfg = _get_variant_config(None, src_sid)
+                    if var_cfg:
+                        ga2 = (var_cfg.get('game_agents') or {})
+                        cfg2 = ga2.get(agent_key) or {}
+                        prov = prov or cfg2.get('provider')
+                        modl = modl or cfg2.get('model')
+                except Exception:
+                    pass
+        # 4) DB-backed settings (current, then default)
+        if not (prov and modl):
+            for name in ('current', 'default'):
+                try:
+                    s = load_settings_from_db(name) or {}
+                    ga3 = (s.get('game_agents') or {})
+                    cfg3 = ga3.get(agent_key) or {}
+                    prov = prov or cfg3.get('provider')
+                    modl = modl or cfg3.get('model')
+                    if not (prov and modl):
+                        prov = prov or s.get('llm_provider')
+                        modl = modl or s.get('llm_model')
+                    if prov and modl:
+                        break
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return prov, modl
+
+def _get_variant_config(variant_id: Optional[str] = None, source_session_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    if not variant_id and not source_session_id:
+        return None
+    try:
+        base = os.path.dirname(__file__)
+        for fname in ('experimental_config_six.json', 'experimental_config.json'):
+            try:
+                with open(os.path.join(base, fname), 'r', encoding='utf-8') as f:
+                    conf = json.load(f)
+                for _, econf in (conf.get('experiments') or {}).items():
+                    for vv in econf.get('variants', []) or []:
+                        cfg = vv.get('config') or {}
+                        if variant_id and vv.get('id') == variant_id:
+                            return cfg
+                        if source_session_id and cfg.get('session_id') == source_session_id:
+                            return cfg
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return None
+
 # Migrate legacy database if needed
 migrate_legacy_database()
 
@@ -895,6 +1006,24 @@ def handle_chat():
         # Add player's message (as the speaking NPC)
         try:
             memory_agent.add_message(dialogue.dialogue_id, sender=as_npc, receiver=to_npc, message_text=message)
+            
+            # Debug logging: verify message was stored and check NPC context
+            try:
+                stored_messages = memory_agent.get_dialogue_messages(dialogue.dialogue_id)
+                logger.info(f"After adding player message: dialogue {dialogue.dialogue_id} now has {len(stored_messages)} messages")
+                if stored_messages:
+                    last_msg = stored_messages[-1]
+                    logger.info(f"Last message: {last_msg.sender} -> {last_msg.receiver}: '{last_msg.message_text[:50]}...'")
+                
+                # Check NPC context availability
+                npc_context = memory_agent.get_npc_context(to_npc)
+                logger.info(f"NPC {to_npc} context length: {len(npc_context)} chars")
+                if not npc_context.strip():
+                    logger.warning(f"NPC {to_npc} has empty context - this may cause response issues")
+                
+            except Exception as debug_error:
+                logger.warning('Failed to verify stored message or NPC context: %s', debug_error)
+            
             # Stats: user message
             try:
                 ks = None
@@ -908,7 +1037,7 @@ def handle_chat():
                 except Exception:
                     tokens_override = None
                 from user_stats_manager import log_user_message as _lum
-                _lum(getattr(memory_agent.db_manager, 'db_path', None), session.session_id, message, ks, tokens_override, user_id)
+                _lum(getattr(memory_agent.db_manager, 'db_path', None), session.session_id if session else 'unknown', message, ks, tokens_override, user_id)
             except Exception:
                 pass
             # SSE broadcasting removed - frontend handles messages directly
@@ -916,64 +1045,100 @@ def handle_chat():
             logger.exception('Failed to add player message: %s', e)
             return jsonify({'error': 'failed to record message'}), 500
 
+        # Ensure NPC memories are initialized for both NPCs in the conversation
+        try:
+            # Check and initialize memory for both NPCs
+            for npc_name in [as_npc, to_npc]:
+                npc_memory = memory_agent.get_npc_memory(npc_name)
+                if not npc_memory:
+                    logger.warning(f"NPC {npc_name} has no memory record - attempting to initialize")
+                    # Try to seed NPC from session settings
+                    try:
+                        if session and session.game_settings:
+                            _seed_npcs_for_session_from_settings(session.game_settings)
+                        else:
+                            logger.warning(f"Cannot initialize NPC {npc_name} - no session or game settings")
+                    except Exception as seed_error:
+                        logger.error(f"Failed to seed NPC {npc_name}: {seed_error}")
+        except Exception as memory_init_error:
+            logger.warning(f"Failed to initialize NPC memories: {memory_init_error}")
+
         # Generate NPC response using the stateless NPC agent; derive LLM config
         try:
             from agents.npc_agent import NPC_Agent
-            # Configure NPC agent from runtime config if supplied; otherwise infer from session's experiment
-            agent_cfg = app_runtime_config.get('game_agent_llms') or {}
-            dlg_cfg = agent_cfg.get('dialogue_agent') or {}
-            prov = dlg_cfg.get('provider')
-            modl = dlg_cfg.get('model')
+            # Resolve dialogue agent LLM from session/DB
+            prov = None
+            modl = None
+            # Allow runtime override first
+            try:
+                agent_cfg = app_runtime_config.get('game_agent_llms') or {}
+                dlg_cfg = agent_cfg.get('dialogue_agent') or {}
+                prov = dlg_cfg.get('provider')
+                modl = dlg_cfg.get('model')
+            except Exception:
+                pass
             if not (prov and modl):
+                prov, modl = _resolve_llm_config_for(session, 'dialogue_agent')
+
+            # Update social agents' LLM configs from session or DB
+            try:
+                gs = session.game_settings or {}
+            except Exception:
+                gs = {}
+            sa = (gs.get('social_agents') or {}) if isinstance(gs, dict) else {}
+            if not sa:
+                # Try DB settings if session has none
+                for name in ('current', 'default'):
+                    s = load_settings_from_db(name)
+                    if s and isinstance(s, dict):
+                        sa = s.get('social_agents') or {}
+                        if sa:
+                            break
+            if not sa:
+                # As a final fallback, try variant config from experiments
                 try:
-                    # First, try to read LLM config directly from session's game_settings (for imported checkpoints)
-                    gs = session.game_settings or {}
-                    ga = gs.get('game_agents') or {}
-                    dd = ga.get('dialogue_agent') or {}
-                    prov = prov or dd.get('provider') or gs.get('llm_provider')
-                    modl = modl or dd.get('model') or gs.get('llm_model')
-                    if not (prov and modl):
-                        # Fallback to experimental_config.json using current session's experiment metadata
-                        exp = gs.get('experiment') or {}
-                        exp_name = exp.get('experiment_name')
-                        var_id = exp.get('variant_id')
-                        if exp_name and var_id:
-                            cfg_path = os.path.join(os.path.dirname(__file__), 'experimental_config.json')
-                            with open(cfg_path, 'r', encoding='utf-8') as f:
-                                conf = json.load(f)
-                            v = None
-                            for _, econf in (conf.get('experiments') or {}).items():
-                                if econf.get('name') and True:  # iterate all and match by id
-                                    for vv in econf.get('variants', []):
-                                        if vv.get('id') == var_id:
-                                            v = vv
-                                            break
-                                    if v:
-                                        break
-                        if v:
-                            ga = (v.get('config') or {}).get('game_agents') or {}
-                            dd = ga.get('dialogue_agent') or {}
-                            prov = prov or dd.get('provider')
-                            modl = modl or dd.get('model')
+                    exp = (gs.get('experiment') or {}) if isinstance(gs, dict) else {}
+                    var_cfg = _get_variant_config(exp.get('variant_id'), exp.get('scenario_source_session_id'))
+                    if var_cfg:
+                        sa = var_cfg.get('social_agents') or {}
                 except Exception:
                     pass
-            
-            # Update social agents' LLM configs from session's game_settings if available
-            gs = session.game_settings or {}
-            sa = gs.get('social_agents') or {}
             def _apply_social(agent_attr: str, key: str):
-                cfg = sa.get(key) or {}
-                prov = cfg.get('provider')
-                model = cfg.get('model')
-                agent = getattr(social_service, agent_attr, None)
-                if agent and hasattr(agent, 'set_llm_provider') and (prov or model):
-                    agent.set_llm_provider(prov or 'test', model or 'test')
+                try:
+                    cfg = sa.get(key) or {}
+                    sprov = cfg.get('provider')
+                    smodel = cfg.get('model')
+                    agent = getattr(social_service, agent_attr, None)
+                    if agent and hasattr(agent, 'set_llm_provider') and (sprov or smodel):
+                        agent.set_llm_provider(sprov or 'test', smodel or 'test')
+                except Exception:
+                    pass
             _apply_social('_opinion', 'opinion_agent')
-            _apply_social('_stance', 'social_stance_agent')
+            _apply_social('_stance', 'stance_agent')
             _apply_social('_knowledge', 'knowledge_agent')
             _apply_social('_reputation', 'reputation_agent')
-            
-            npc_agent = NPC_Agent(memory_agent=memory_agent, llm_provider=prov or 'openrouter', llm_model=modl or 'meta-llama/llama-3.2-3b-instruct:free')
+
+            # Build explicit fallback list from variant config (if any)
+            fallback_list = []
+            try:
+                exp = (gs.get('experiment') or {}) if isinstance(gs, dict) else {}
+                var_cfg = _get_variant_config(exp.get('variant_id'), exp.get('scenario_source_session_id'))
+                if var_cfg:
+                    dcfg = ((var_cfg.get('game_agents') or {}).get('dialogue_agent') or {})
+                    fbs = dcfg.get('fallback_models') or []
+                    if isinstance(fbs, list):
+                        for fb in fbs:
+                            if isinstance(fb, dict) and fb.get('provider') and fb.get('model'):
+                                fallback_list.append((fb.get('provider'), fb.get('model')))
+            except Exception:
+                pass
+
+            npc_agent = NPC_Agent(
+                memory_agent=memory_agent,
+                llm_provider=prov or 'openrouter',
+                llm_model=modl or 'mistralai/ministral-8b',
+                fallback_models=fallback_list,
+            )
             # Pass social agents
             response_text = npc_agent.generate_message(
                 npc_name=to_npc,

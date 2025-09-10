@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardContent, List, TextField, IconButton, Stack, Typography, Divider, Fab } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -24,6 +24,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [lastMessagesLength, setLastMessagesLength] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const keystrokeCountRef = useRef(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,21 +47,31 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const estimateTokens = (text: string) => Math.ceil(text.trim().split(/\s+/).filter(Boolean).length * 1.3);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (messageInput.trim() && selectedNPC) {
       const approxTokens = estimateTokens(messageInput.trim());
-      onSendMessage(messageInput.trim(), keystrokes || undefined, approxTokens);
+      onSendMessage(messageInput.trim(), keystrokeCountRef.current || undefined, approxTokens);
       setMessageInput('');
       setKeystrokes(0);
+      keystrokeCountRef.current = 0;
     }
-  };
+  }, [messageInput, selectedNPC, onSendMessage]);
 
-  const handleKeyPress = (event: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
+
+  // Use a ref to track keystrokes without causing re-renders
+  const handleKeyDown = useCallback(() => {
+    keystrokeCountRef.current += 1;
+    // Update state less frequently - only every 10 keystrokes for UI feedback
+    if (keystrokeCountRef.current % 10 === 0) {
+      setKeystrokes(keystrokeCountRef.current);
+    }
+  }, []);
 
   return (
     <Card 
@@ -131,7 +142,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               placeholder={selectedNPC ? "Type your message..." : "Select an NPC to start chatting"}
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
-              onKeyDown={() => setKeystrokes((k) => k + 1)}
+              onKeyDown={handleKeyDown}
               onKeyPress={handleKeyPress}
               disabled={!selectedNPC || isLoading}
               variant="outlined"

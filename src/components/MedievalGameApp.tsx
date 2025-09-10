@@ -250,7 +250,7 @@ const MedievalGameContent: React.FC = () => {
         }
       } catch {}
 
-      // Load message history from backend (bounded)
+      // Load message history from backend (bounded) — admin only
       try {
         const hist = await getSessionMessages(sessionId, 300);
         const rawMessages = hist.messages || [];
@@ -269,7 +269,12 @@ const MedievalGameContent: React.FC = () => {
             npcName: senderName || null
           };
         }) as Message[];
-        setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
+        if (isAdmin) {
+          setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
+        } else {
+          // Hide previous messages for non-admin users
+          setMessages([]);
+        }
         // Derive session NPCs and update list
         const derivedNpcs = mapNPCsFromSession(res, rawMessages);
         if (derivedNpcs.length) setNpcs(derivedNpcs);
@@ -398,7 +403,11 @@ const MedievalGameContent: React.FC = () => {
                     npcName: senderName || null
                   };
                 }) as Message[];
-                setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
+                if (isAdmin) {
+                  setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
+                } else {
+                  setMessages([]);
+                }
               } catch {
                 setMessages([]);
               }
@@ -625,7 +634,7 @@ const MedievalGameContent: React.FC = () => {
             npcName: senderName || null
           };
         }) as Message[];
-        if (loaded.length) setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
+        if (isAdmin && loaded.length) setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
       } catch {}
     } catch (e) {
       console.warn('Failed to start test', index + 1, e);
@@ -838,27 +847,29 @@ const MedievalGameContent: React.FC = () => {
         pushMsg(npcResponse);
       }
       
-      // Also refresh DB messages to get the latest state
-      try {
-        const hist = await getSessionMessages(sid, 50); // Get fewer messages to avoid old ones
-        const loaded = (hist.messages || []).slice(-10).map((m: any) => ({
-          id: m.message_id || `msg-${Date.now()}-${Math.random()}`,
-          type: MessageType.NPC, // will be corrected by updateMessageNPCIds below
-          content: m.message_text,
-          timestamp: new Date(m.timestamp),
-          day: m.day,
-          timePeriod: String(m.time_period || '').toLowerCase() as TimePeriod,
-          npcId: null,
-          npcName: m.sender || null
-        })) as Message[];
-        
-        // Only add new messages that aren't already in our current messages
-        const currentMessageIds = new Set(messages.map(m => m.id));
-        const newMessages = loaded.filter(m => !currentMessageIds.has(m.id));
-        if (newMessages.length > 0) {
-          setMessages(prev => [...prev, ...updateMessageNPCIds(newMessages, npcs)]);
-        }
-      } catch {}
+      // Also refresh DB messages for admins; non-admins keep only the current conversation context
+      if (isAdmin) {
+        try {
+          const hist = await getSessionMessages(sid, 50); // Get fewer messages to avoid old ones
+          const loaded = (hist.messages || []).slice(-10).map((m: any) => ({
+            id: m.message_id || `msg-${Date.now()}-${Math.random()}`,
+            type: MessageType.NPC, // will be corrected by updateMessageNPCIds below
+            content: m.message_text,
+            timestamp: new Date(m.timestamp),
+            day: m.day,
+            timePeriod: String(m.time_period || '').toLowerCase() as TimePeriod,
+            npcId: null,
+            npcName: m.sender || null
+          })) as Message[];
+          
+          // Only add new messages that aren't already in our current messages
+          const currentMessageIds = new Set(messages.map(m => m.id));
+          const newMessages = loaded.filter(m => !currentMessageIds.has(m.id));
+          if (newMessages.length > 0) {
+            setMessages(prev => [...prev, ...updateMessageNPCIds(newMessages, npcs)]);
+          }
+        } catch {}
+      }
       
       // Track user chat count for current timed test
       setUserMsgCount((c) => c + 1);
@@ -1132,7 +1143,7 @@ const MedievalGameContent: React.FC = () => {
                         npcId: null,
                         npcName: m.sender || null
                       })) as Message[];
-                      if (loaded.length) setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
+        if (isAdmin && loaded.length) setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
                     } catch {}
                     
                     setMessages(prev => [...prev, {
@@ -1277,6 +1288,7 @@ const MedievalGameContent: React.FC = () => {
               display: { xs: 'block', md: 'none' }
             }}
           >
+            {isAdmin && (
             <GameControls
               gameState={gameState}
               currentDay={currentDay}
@@ -1294,20 +1306,22 @@ const MedievalGameContent: React.FC = () => {
               sessionId={sessionId || undefined}
               sessionName={sessionName || undefined}
               onRenameSession={handleRenameSession}
-            />
+            />)}
             {/* Mobile Filters below controls */}
-            <Box className="mt-2">
-              <ChatFilters
-                filters={chatFilters}
-                onFiltersChange={setChatFilters}
-                onClearFilters={clearChatFilters}
-                maxDay={Math.max(Number(numDays || currentDay), ...messages.map(m => m.day || 1), currentDay)}
-                currentDay={currentDay}
-                currentTimePeriod={currentTimePeriod}
-                npcs={npcs}
-                periods={periods}
-              />
-            </Box>
+            {isAdmin && (
+              <Box className="mt-2">
+                <ChatFilters
+                  filters={chatFilters}
+                  onFiltersChange={setChatFilters}
+                  onClearFilters={clearChatFilters}
+                  maxDay={Math.max(Number(numDays || currentDay), ...messages.map(m => m.day || 1), currentDay)}
+                  currentDay={currentDay}
+                  currentTimePeriod={currentTimePeriod}
+                  npcs={npcs}
+                  periods={periods}
+                />
+              </Box>
+            )}
           </Box>
 
           {/* Left Sidebar (Desktop) */}
@@ -1321,6 +1335,7 @@ const MedievalGameContent: React.FC = () => {
             }}
           >
             <Box className="flex-shrink-0">
+              {isAdmin && (
               <GameControls
                 gameState={gameState}
                 currentDay={currentDay}
@@ -1338,7 +1353,7 @@ const MedievalGameContent: React.FC = () => {
                 sessionId={sessionId || undefined}
                 sessionName={sessionName || undefined}
                 onRenameSession={handleRenameSession}
-              />
+              />)}
             </Box>
             
             <Box className="flex-1 min-h-0 overflow-hidden">
@@ -1371,6 +1386,7 @@ const MedievalGameContent: React.FC = () => {
             }}
           >
             {/* Desktop Filters */}
+            {isAdmin && (
             <Box 
               sx={{ 
                 display: { xs: 'none', md: 'block' },
@@ -1388,6 +1404,7 @@ const MedievalGameContent: React.FC = () => {
                 periods={periods}
               />
             </Box>
+            )}
             
             <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
               <Box sx={{ flex: 1, minHeight: 0 }}>

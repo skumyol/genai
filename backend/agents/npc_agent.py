@@ -15,7 +15,7 @@ encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
     
 class NPC_Agent:
-    def __init__(self, memory_agent: MemoryAgent, llm_provider='openrouter', llm_model='meta-llama/llama-3-8b-instruct:free'):
+    def __init__(self, memory_agent: MemoryAgent, llm_provider='openrouter', llm_model='meta-llama/llama-3-8b-instruct:free', fallback_models=None):
         """
         Stateless NPC Agent that only holds prompts and LLM configuration.
         All character data is retrieved from memory_agent using the NPC name.
@@ -28,6 +28,8 @@ class NPC_Agent:
         self.memory_agent = memory_agent
         self._llm_provider = llm_provider
         self._llm_model = llm_model
+        # Optional list of (provider, model) tuples to try as fallbacks
+        self._fallback_models = fallback_models or []
 
     def get_llm_provider(self):
         return self._llm_provider
@@ -40,6 +42,9 @@ class NPC_Agent:
 
     def set_llm_model(self, model):
         self._llm_model = model
+    
+    def set_fallback_models(self, models):
+        self._fallback_models = models or []
     
     def get_character_data(self, npc_name: str) -> Optional[Dict[str, Any]]:
         """Get character data from memory agent for a specific NPC (by name)"""
@@ -242,6 +247,7 @@ RESPONSE STYLE:
                 system_prompt=system,
                 user_prompt=user,
                 temperature=0.6,
+                fallback_models=self._fallback_models,
             )
 
             # Update conversation context in memory agent
@@ -258,6 +264,7 @@ RESPONSE STYLE:
                 system_prompt=system_message,
                 user_prompt=user,
                 temperature=0.7,
+                fallback_models=self._fallback_models,
             )
 
             # Update conversation context in memory agent
@@ -278,6 +285,7 @@ RESPONSE STYLE:
                     system_prompt=system_message,
                     user_prompt=user,
                     temperature=0.7,
+                    fallback_models=self._fallback_models,
                     agent_name="npc_agent",
                 )
                 # Update conversation context in memory agent
@@ -355,6 +363,22 @@ RESPONSE STYLE:
 
             # Use knowledge in the prompt using memory agent npc knowledge
             npc_context = self.memory_agent.get_npc_context(npc_name)
+            
+            # Log context availability for debugging
+            logging.info(f"NPC {npc_name} context retrieved: {len(npc_context)} chars")
+            if not npc_context.strip():
+                logging.warning(f"NPC {npc_name} has empty context - providing basic fallback")
+                # Provide minimal fallback context using dialogue history
+                try:
+                    recent_messages = self.memory_agent.get_dialogue_messages(dialogue.dialogue_id)
+                    if recent_messages and len(recent_messages) > 1:
+                        msg_summaries = []
+                        for msg in recent_messages[-5:]:  # Last 5 messages
+                            msg_summaries.append(f"{msg.sender}: {msg.message_text[:50]}...")
+                        npc_context = f"Recent conversation:\n" + "\n".join(msg_summaries)
+                        logging.info(f"Generated fallback context for {npc_name}: {len(npc_context)} chars")
+                except Exception as fallback_error:
+                    logging.error(f"Failed to generate fallback context for {npc_name}: {fallback_error}")
 
             prompt += self.respond_incoming_message(
                 npc_name,
@@ -381,6 +405,7 @@ RESPONSE STYLE:
                 system_prompt=system_message,
                 user_prompt=user_message,
                 temperature=0.9,
+                fallback_models=self._fallback_models,
                 agent_name="npc_agent",
             )
 
@@ -630,6 +655,7 @@ Rules:
                 model=self._llm_model,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
+                fallback_models=self._fallback_models,
                 agent_name="npc_agent",
             )
             self.memory_agent.update_npc_dialogue_summary(npc_name, final_summary)
