@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: narrativehive-backend
+    restart: unless-stopped
+    ports:
+      - "5006:5002"
+    volumes:
+      - narrativehive_databases:/app/databases
+      - narrativehive_metrics:/app/metrics
+      - narrativehive_static:/app/static
+      - narrativehive_logs:/app/logs
+    environment:
+      - API_PORT=5002
+      - PYTHONUNBUFFERED=1
+    networks:
+      - narrativehive-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: narrativehive-frontend
+    restart: unless-stopped
+    ports:
+      - "5176:80"
+    depends_on:
+      - backend
+    networks:
+      - narrativehive-network
+
+networks:
+  narrativehive-network:
+    driver: bridge
+
+volumes:
+  narrativehive_databases:
+    driver: local
+  narrativehive_metrics:
+    driver: local
+  narrativehive_static:
+    driver: local
+  narrativehive_logs:
+    driver: local

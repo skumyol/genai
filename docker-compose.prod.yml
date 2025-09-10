@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: narrativehive-backend
+    restart: unless-stopped
+    ports:
+      - "5006:5002"
+    volumes:
+      - narrativehive_databases:/app/databases
+      - narrativehive_metrics:/app/metrics
+      - narrativehive_static:/app/static
+      - narrativehive_logs:/app/logs
+      # Optional: mount backup location
+      - /opt/narrativehive/backups:/app/backups
+    environment:
+      - API_PORT=5002
+      - PYTHONUNBUFFERED=1
+      - NODE_ENV=production
+    networks:
+      - narrativehive-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: narrativehive-frontend
+    restart: unless-stopped
+    ports:
+      - "5176:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - narrativehive-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  narrativehive-network:
+    driver: bridge
+
+volumes:
+  narrativehive_databases:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/narrativehive/data/databases
+  narrativehive_metrics:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/narrativehive/data/metrics
+  narrativehive_static:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/narrativehive/data/static
+  narrativehive_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/narrativehive/data/logs

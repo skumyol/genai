@@ -30,7 +30,7 @@ import { QuestionnaireModal } from './questionnaire/QuestionnaireModal';
 import { mockQuery } from '../data/medievalGameMockData';
 import { GameState, TimePeriod, MessageType, NPCStatus, StudyPhase } from '../types/enums';
 import { Message, NPC, Character } from '../types/schema';
-import { ensureUserId, ensureUserSessions, getUserTestSession, setActiveSession, createSession, fetchSettings, getSession, getSessionMessages, getSessionNPCs, startGame, stopGame, saveSession, listSelfRuns, importIntoSession, sendPlayerChatWithStats, cloneSessionForUser, listSessionsFiltered, listBaseSessionsFiltered, resetUserSessions, getSessionDayPeriods, openGameStream, getActiveSession } from '../api/client';
+import { ensureUserId, ensureUserSessions, getUserTestSession, setActiveSession, createSession, fetchSettings, getSession, getSessionMessages, getSessionNPCs, startGame, stopGame, saveSession, listSelfRuns, importIntoSession, sendPlayerChatWithStats, cloneSessionForUser, listSessionsFiltered, listBaseSessionsFiltered, resetUserSessions, getSessionDayPeriods, getActiveSession } from '../api/client';
 import { useQuestionnaire } from '../hooks/useQuestionnaire';
 
 const MedievalGameContent: React.FC = () => {

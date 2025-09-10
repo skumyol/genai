@@ -1958,7 +1958,8 @@ if __name__ == '__main__':
     # Database is initialized by MemoryAgent/DatabaseManager
     # Run with SocketIO support
     port = int(os.environ.get('API_PORT', '8000'))
-    socketio.run(app, debug=True, port=port)
+    debug_mode = os.environ.get('FLASK_ENV', 'production') == 'development'
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug_mode, allow_unsafe_werkzeug=True)
 
 # -----------------------------------------------------------------------------
 # Config API: update runtime settings without environment variables
