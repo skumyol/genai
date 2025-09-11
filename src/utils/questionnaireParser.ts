@@ -242,6 +242,7 @@ export class QuestionnaireParser {
  * Load questionnaires from the project's CSV files
  */
 export async function loadQuestionnaireFromCSV(): Promise<Questionnaire[]> {
+  // Prefer the split files in /public for consistency across phases
   const questionnaires: Questionnaire[] = [];
   const files = [
     'questionnaire_pre_game.csv',
@@ -249,36 +250,36 @@ export async function loadQuestionnaireFromCSV(): Promise<Questionnaire[]> {
     'questionnaire_session_2.csv', 
     'questionnaire_final_compare.csv'
   ];
-  
-  for (const file of files) {
-    try {
-      const response = await fetch(`/${file}`);
-      if (!response.ok) {
-        console.warn(`Could not load ${file}: ${response.statusText}`);
-        continue;
-      }
-      const csvText = await response.text();
-      const parsed = QuestionnaireParser.parseCSV(csvText);
-      if (parsed.length > 0) {
-        questionnaires.push(...parsed);
-      }
-    } catch (error) {
-      console.error(`Error loading ${file}:`, error);
-    }
-  }
-  
-  // Fallback to the single file if no questionnaires were loaded
-  if (questionnaires.length === 0) {
-    try {
-      const response = await fetch('/questionarrie.csv');
-      if (response.ok) {
+
+  try {
+    for (const file of files) {
+      try {
+        const response = await fetch(`/${file}`);
+        if (!response.ok) continue;
         const csvText = await response.text();
-        return QuestionnaireParser.parseCSV(csvText);
-      }
-    } catch (error) {
-      console.error('Error loading questionnaire:', error);
+        const parsed = QuestionnaireParser.parseCSV(csvText);
+        if (parsed.length > 0) questionnaires.push(...parsed);
+      } catch {/* ignore individual file errors */}
     }
+
+    if (questionnaires.length > 0) return questionnaires;
+  } catch (e) {
+    console.warn('Error loading split questionnaire CSVs:', e);
   }
-  
+
+  // Fallback to consolidated CSV at repo root if split files not found
+  try {
+    const resp = await fetch('/questionarrie.csv');
+    if (resp.ok) {
+      const csvText = await resp.text();
+      const parsed = QuestionnaireParser.parseCSV(csvText);
+      if (parsed.length > 0) return parsed;
+    } else {
+      console.warn('questionarrie.csv not found at root:', resp.statusText);
+    }
+  } catch (e) {
+    console.warn('Error loading questionarrie.csv:', e);
+  }
+
   return questionnaires;
 }

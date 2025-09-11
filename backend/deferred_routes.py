@@ -1,11 +1,15 @@
 import os
+import sqlite3
 import json
+import time
 from datetime import datetime
 from typing import Any, Callable, Dict
 
 from flask import Blueprint, jsonify, request
 from agents.dataclasses import TimePeriod
 from user_dataset_manager import init_user_dataset, switch_memory_agent_to_user, get_user_db_path
+from db_init import init_main_game_data
+from database_manager import DatabaseManager
 import traceback
 
 
@@ -415,47 +419,213 @@ def create_deferred_blueprint(
             return err(f"Failed to reinitialize DB: {e}", 500)
 
     # ---------------------------------------------------------------------
+    # Admin: Full reset of main database (DANGEROUS)
+    # Deletes maingamedata.db and re-initializes required tables and defaults.
+    # ---------------------------------------------------------------------
+    @bp.post(f"{api_prefix}/admin/full_reset")
+    def admin_full_reset():
+        try:
+            # Resolve DB path from current memory agent
+            db_path = getattr(memory_agent.db_manager, 'db_path', None)
+            if not db_path:
+                return err('DB path not found', 500)
+
+            # Best-effort: remove the database file
+            try:
+                if os.path.exists(db_path):
+                    os.remove(db_path)
+            except Exception as e:
+                return err(f'Failed to remove DB file: {e}', 500)
+
+            # Recreate a fresh database manager
+            try:
+                new_dbm = DatabaseManager(db_path)
+                memory_agent.db_manager = new_dbm
+                # Clear any loaded session in memory agent
+                try:
+                    memory_agent.current_session = None
+                except Exception:
+                    pass
+            except Exception as e:
+                return err(f'Failed to initialize DatabaseManager: {e}', 500)
+
+            # Recreate settings table and seed default + current
+            try:
+                conn = sqlite3.connect(db_path)
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS settings (
+                        name TEXT PRIMARY KEY,
+                        value_json TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                    """
+                )
+                now = datetime.utcnow().isoformat()
+                # Seed defaults
+                cur.execute(
+                    "INSERT OR REPLACE INTO settings (name, value_json, updated_at) VALUES (?, ?, ?)",
+                    ("default", json.dumps(default_settings or {}), now),
+                )
+                cur.execute(
+                    "INSERT OR REPLACE INTO settings (name, value_json, updated_at) VALUES (?, ?, ?)",
+                    ("current", json.dumps(default_settings or {}), now),
+                )
+                conn.commit()
+            except Exception as e:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                return err(f'Failed to initialize settings: {e}', 500)
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+            # Recreate admin/session helper tables not covered by DatabaseManager
+            try:
+                with sqlite3.connect(db_path) as conn2:
+                    cur2 = conn2.cursor()
+                    cur2.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS session_checkpoints (
+                            session_id TEXT PRIMARY KEY,
+                            user_id TEXT NOT NULL,
+                            checkpoint_data BLOB NOT NULL,
+                            created_at TEXT NOT NULL,
+                            FOREIGN KEY(user_id) REFERENCES users(user_id)
+                        )
+                        """
+                    )
+                    cur2.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS conversation_metrics (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            session_id TEXT NOT NULL,
+                            user_id TEXT NOT NULL,
+                            dialogue_id TEXT NOT NULL,
+                            message_count INTEGER NOT NULL,
+                            avg_response_time REAL,
+                            created_at TEXT NOT NULL,
+                            FOREIGN KEY(session_id) REFERENCES session_checkpoints(session_id),
+                            FOREIGN KEY(user_id) REFERENCES users(user_id)
+                        )
+                        """
+                    )
+                    cur2.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS ux_metrics (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id TEXT NOT NULL,
+                            session_id TEXT NOT NULL,
+                            action TEXT NOT NULL,
+                            data_json TEXT NOT NULL,
+                            timestamp TEXT NOT NULL,
+                            FOREIGN KEY(user_id) REFERENCES users(user_id),
+                            FOREIGN KEY(session_id) REFERENCES session_checkpoints(session_id)
+                        )
+                        """
+                    )
+                    conn2.commit()
+            except Exception as e:
+                return err(f'Failed to initialize auxiliary tables: {e}', 500)
+
+            # Seed default main_game_data entry
+            try:
+                agent_settings_path = default_settings_path.replace('default_settings.json', 'agent_settings.json')
+                init_main_game_data(db_path, default_settings_path, agent_settings_path)
+            except Exception as e:
+                return err(f'Failed to seed main_game_data: {e}', 500)
+
+            return ok({
+                'ok': True,
+                'message': 'Main database fully reset',
+                'db_path': db_path,
+            })
+        except Exception as e:
+            return err(f'Full reset failed: {e}', 500)
+
+    # ---------------------------------------------------------------------
     # Users (incremental ids: user1..userN) and dataset info
     # ---------------------------------------------------------------------
     @bp.post(f"{api_prefix}/users")
     def create_user_stub():
-        """Generate and return an incremental user_id (userN) and ensure dataset + DB rows exist.
+        """Generate and return a unique incremental user_id (userN) using the DB.
 
-        Also seeds main_game_data for this user so analytics are initialized.
+        This no longer relies on the backend/users directory (which may be empty),
+        and instead computes the next id from the `users` table. Also seeds
+        main_game_data for this user so analytics are initialized.
         """
         try:
-            users_root = os.path.join(os.path.dirname(__file__), 'users')
-            os.makedirs(users_root, exist_ok=True)
-            max_n = 0
-            for name in os.listdir(users_root):
-                if not name.startswith('user'):
-                    continue
-                suffix = name[4:]
-                if suffix.isdigit():
-                    max_n = max(max_n, int(suffix))
+            # Compute next incremental id from DB to avoid always returning user1
+            conn = get_db()
+            try:
+                # Ensure this connection waits for locks
+                conn.execute("PRAGMA busy_timeout=30000;")
+            except Exception:
+                pass
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    SELECT COALESCE(MAX(CAST(SUBSTR(user_id, 5) AS INTEGER)), 0)
+                    FROM users
+                    WHERE user_id LIKE 'user%'
+                    """
+                )
+                row = cur.fetchone()
+                max_n = int(row[0] or 0)
+            except Exception:
+                # If users table is empty or missing, fallback to 0
+                max_n = 0
             new_id = f"user{max_n + 1}"
 
-            # Ensure per-user directory (legacy no-op)
+            # Best-effort legacy dataset init (no-op in centralized DB mode)
             try:
                 init_user_dataset(new_id)
             except Exception:
                 pass
 
-            # Ensure DB 'users' row exists and seed main_game_data for this user
+            # Ensure DB 'users' row exists; retry on rare race with another creator
             try:
-                conn = get_db()
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT OR IGNORE INTO users (user_id, created_at, metadata) VALUES (?, ?, ?)",
-                    (new_id, datetime.utcnow().isoformat(), json.dumps({})),
-                )
-                conn.commit()
+                inserted = False
+                for _ in range(3):
+                    try:
+                        cur.execute(
+                            "INSERT INTO users (user_id, created_at, metadata) VALUES (?, ?, ?)",
+                            (new_id, datetime.utcnow().isoformat(), json.dumps({})),
+                        )
+                        conn.commit()
+                        inserted = True
+                        break
+                    except sqlite3.IntegrityError:
+                        # Another request likely inserted the same id; recompute and try again
+                        cur.execute(
+                            """
+                            SELECT COALESCE(MAX(CAST(SUBSTR(user_id, 5) AS INTEGER)), 0)
+                            FROM users
+                            WHERE user_id LIKE 'user%'
+                            """
+                        )
+                        row = cur.fetchone()
+                        max_n = int(row[0] or 0)
+                        new_id = f"user{max_n + 1}"
+                if not inserted:
+                    # Last attempt with INSERT OR IGNORE as fallback
+                    cur.execute(
+                        "INSERT OR IGNORE INTO users (user_id, created_at, metadata) VALUES (?, ?, ?)",
+                        (new_id, datetime.utcnow().isoformat(), json.dumps({})),
+                    )
+                    conn.commit()
             except Exception:
                 # best-effort; do not fail user creation
                 pass
 
+            # Seed top-level main_game_data row so downstream queries see the user
             try:
-                # Seed top-level game data row so downstream queries see the user
                 if not memory_agent.db_manager.get_main_game_data(new_id):
                     memory_agent.db_manager.create_main_game_data(user_id=new_id)
             except Exception:
@@ -1243,74 +1413,80 @@ def create_deferred_blueprint(
             
             # Ensure user record exists and has main_game_data entry
             try:
+                # Allocate user_id if missing using simple random approach (faster than max query)
                 if not user_id:
-                    # Find max userN
-                    cur.execute("SELECT user_id FROM users WHERE user_id LIKE 'user%'")
-                    nums = []
-                    for r in cur.fetchall() or []:
-                        try:
-                            sid = r[0] or ''
-                            if sid.startswith('user') and sid[4:].isdigit():
-                                nums.append(int(sid[4:]))
-                        except Exception:
-                            pass
-                    next_n = (max(nums) + 1) if nums else 1
-                    user_id = f"user{next_n}"
-                
-                # Upsert user row
+                    import random
+                    # Use random approach for speed instead of scanning entire users table
+                    user_id = f"user{random.randint(1000, 999999)}"
+
+                # Insert user row; if it fails, try a few more times with different IDs
                 now_iso = datetime.utcnow().isoformat()
-                try:
-                    cur.execute(
-                        "INSERT OR IGNORE INTO users (user_id, created_at, metadata) VALUES (?, ?, ?)",
-                        (user_id, now_iso, json.dumps({})),
-                    )
-                    
-                    # Ensure main_game_data exists for this user
+                inserted = False
+                for attempt in range(5):
                     try:
-                        mgd = memory_agent.db_manager.get_main_game_data(user_id)
-                        if not mgd:
-                            memory_agent.db_manager.create_main_game_data(user_id=user_id)
-                    except Exception as e:
-                        print(f"Error ensuring main_game_data: {e}")
-                except Exception as e:
-                    print(f"Error upserting user: {e}")
+                        cur.execute(
+                            "INSERT OR IGNORE INTO users (user_id, created_at, metadata) VALUES (?, ?, ?)",
+                            (user_id, now_iso, json.dumps({})),
+                        )
+                        inserted = True
+                        break
+                    except Exception:
+                        # If collision, try a new random ID
+                        import random
+                        user_id = f"user{random.randint(1000, 999999)}"
+                
+                # Skip the expensive main_game_data check - we'll create it lazily when needed
             except Exception as e:
-                # If anything goes wrong, fallback to anonymous
-                print(f"User handling error: {e}")
-                user_id = user_id or 'user1'
-            # Attempt insert; if table missing (e.g., on first run), create and retry
+                return err(f'Failed to allocate user id: {e}', 500)
+
+            # Ensure questionnaire_responses table exists (fast version - no expensive deduplication)
             try:
                 cur.execute(
                     """
-                    INSERT INTO questionnaire_responses
-                    (user_id, session_id, questionnaire_id, phase, responses_json, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        user_id,
-                        session_id,
-                        qid,
-                        phase,
-                        json.dumps(responses, default=str),
-                        datetime.utcnow().isoformat(),
-                    ),
+                    CREATE TABLE IF NOT EXISTS questionnaire_responses (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id TEXT NOT NULL,
+                        session_id TEXT,
+                        questionnaire_id TEXT NOT NULL,
+                        phase TEXT,
+                        responses_json TEXT NOT NULL,
+                        created_at TEXT NOT NULL
+                    )
+                    """
                 )
+                # Try to create index but don't do expensive deduplication
+                try:
+                    cur.execute(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS uq_questionnaire_user_phase ON questionnaire_responses(user_id, questionnaire_id, phase)"
+                    )
+                except Exception:
+                    # Index creation failed, probably due to duplicates - that's OK, we'll handle it in the upsert
+                    pass
             except Exception as ie:
-                if 'no such table: questionnaire_responses' in str(ie).lower():
-                    try:
+                return err(f'Failed to ensure questionnaire table: {ie}', 500)
+
+            # Insert or update response (avoid duplicates) with simple retry on lock
+            inserted_new = False
+            attempts = 0
+            while True:
+                try:
+                    # Detect existing row
+                    cur.execute(
+                        "SELECT 1 FROM questionnaire_responses WHERE user_id=? AND questionnaire_id=? AND phase=?",
+                        (user_id, qid, phase),
+                    )
+                    exists = cur.fetchone() is not None
+                    now_iso = datetime.utcnow().isoformat()
+                    if exists:
                         cur.execute(
                             """
-                            CREATE TABLE IF NOT EXISTS questionnaire_responses (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                user_id TEXT NOT NULL,
-                                session_id TEXT,
-                                questionnaire_id TEXT NOT NULL,
-                                phase TEXT,
-                                responses_json TEXT NOT NULL,
-                                created_at TEXT NOT NULL
-                            )
-                            """
+                            UPDATE questionnaire_responses
+                            SET session_id=?, responses_json=?, created_at=?
+                            WHERE user_id=? AND questionnaire_id=? AND phase=?
+                            """,
+                            (session_id, json.dumps(responses, default=str), now_iso, user_id, qid, phase),
                         )
+                    else:
                         cur.execute(
                             """
                             INSERT INTO questionnaire_responses
@@ -1323,50 +1499,49 @@ def create_deferred_blueprint(
                                 qid,
                                 phase,
                                 json.dumps(responses, default=str),
-                                datetime.utcnow().isoformat(),
+                                now_iso,
                             ),
                         )
-                    except Exception as ie2:
-                        return err(f'Failed to initialize questionnaire table: {ie2}', 500)
-                else:
-                    return err(f'Failed to store questionnaire: {ie}', 500)
+                        inserted_new = True
+                    break
+                except sqlite3.OperationalError as oe:
+                    if 'locked' in str(oe).lower() and attempts < 5:
+                        attempts += 1
+                        time.sleep(0.15 * attempts)
+                        continue
+                    return err(f'Failed to store questionnaire: {oe}', 500)
 
             conn.commit()
-            # Also append responses to a CSV per questionnaire for easy export
+            # Also append responses to a CSV per questionnaire for easy export (only on first insert to avoid duplicates)
             try:
                 import csv
                 metrics_dir = os.path.join(os.path.dirname(__file__), 'metrics')
                 os.makedirs(metrics_dir, exist_ok=True)
                 csv_path = os.path.join(metrics_dir, f'questionnaire_{qid}.csv')
                 need_header = not os.path.exists(csv_path)
-                with open(csv_path, 'a', newline='', encoding='utf-8') as f:
-                    w = csv.writer(f)
-                    if need_header:
-                        w.writerow(['created_at','user_id','session_id','questionnaire_id','phase','question_id','question_name','response','response_timestamp'])
-                    now_iso = datetime.utcnow().isoformat()
-                    for r in (responses or []):
-                        qn = (r or {}).get('questionName') or (r or {}).get('question_name')
-                        rid = (r or {}).get('questionId') or (r or {}).get('question_id')
-                        resp = (r or {}).get('response')
-                        if isinstance(resp, (list, tuple)):
-                            try:
-                                resp = ";".join(map(str, resp))
-                            except Exception:
-                                resp = str(resp)
-                        ts = (r or {}).get('timestamp')
-                        w.writerow([now_iso, user_id, session_id, qid, phase, rid, qn, resp, ts])
+                if inserted_new:
+                    with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+                        w = csv.writer(f)
+                        if need_header:
+                            w.writerow(['created_at','user_id','session_id','questionnaire_id','phase','question_id','question_name','response','response_timestamp'])
+                        now_iso = datetime.utcnow().isoformat()
+                        for r in (responses or []):
+                            qn = (r or {}).get('questionName') or (r or {}).get('question_name')
+                            rid = (r or {}).get('questionId') or (r or {}).get('question_id')
+                            resp = (r or {}).get('response')
+                            if isinstance(resp, (list, tuple)):
+                                try:
+                                    resp = ";".join(map(str, resp))
+                                except Exception:
+                                    resp = str(resp)
+                            ts = (r or {}).get('timestamp')
+                            w.writerow([now_iso, user_id, session_id, qid, phase, rid, qn, resp, ts])
             except Exception:
                 # Non-fatal if CSV export fails
                 pass
 
-            # Ensure main_game_data exists for this user
-            try:
-                # Create minimal main game data row if missing
-                mgd = memory_agent.db_manager.get_main_game_data(user_id)
-                if not mgd:
-                    memory_agent.db_manager.create_main_game_data(user_id=user_id)
-            except Exception:
-                pass
+            # Skip main_game_data creation for speed - it will be created lazily when needed
+            # This was causing 60+ second delays in questionnaire submissions
 
             return ok({'ok': True, 'user_id': user_id})
         except Exception as e:

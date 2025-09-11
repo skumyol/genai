@@ -39,26 +39,47 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Safety check: ensure sections is valid
+  const safeSections = Array.isArray(sections) ? sections : [];
+  
+  // Debug logging
+  console.log('[QuestionnaireRenderer] Render - Current section index:', currentSectionIndex);
+  console.log('[QuestionnaireRenderer] Render - Safe sections length:', safeSections.length);
+  
+  // Add useEffect to track when currentSectionIndex changes and fix it if out of bounds
+  React.useEffect(() => {
+    console.log('[QuestionnaireRenderer] Section index changed to:', currentSectionIndex);
+    console.log('[QuestionnaireRenderer] Available sections:', safeSections.length);
+    if (currentSectionIndex >= safeSections.length && safeSections.length > 0) {
+      console.error('[QuestionnaireRenderer] BUG: Section index out of bounds! Resetting to 0', {
+        currentSectionIndex,
+        sectionsLength: safeSections.length
+      });
+      setCurrentSectionIndex(0);
+    }
+  }, [currentSectionIndex, safeSections.length]);
+
   // Calculate all questions across sections for progress tracking
   const allQuestions = useMemo(() => {
-    return sections.flatMap(section => section.questions);
-  }, [sections]);
+    return safeSections.flatMap(section => section.questions || []);
+  }, [safeSections]);
 
   const respondableQuestions = useMemo(() => {
     return allQuestions.filter(q => q.type !== QuestionType.BLOCK_HEADER);
   }, [allQuestions]);
 
-  const currentSection = sections[currentSectionIndex];
-  const isLastSection = currentSectionIndex === sections.length - 1;
+  const currentSection = safeSections[currentSectionIndex];
+  const isLastSection = currentSectionIndex === safeSections.length - 1;
 
   // Get current question index for progress
   const currentQuestionIndex = useMemo(() => {
     let index = 0;
     for (let i = 0; i < currentSectionIndex; i++) {
-      index += sections[i].questions.filter(q => q.type !== QuestionType.BLOCK_HEADER).length;
+      const sectionQuestions = safeSections[i]?.questions || [];
+      index += sectionQuestions.filter(q => q.type !== QuestionType.BLOCK_HEADER).length;
     }
     return index + 1; // 1-based for display
-  }, [currentSectionIndex, sections]);
+  }, [currentSectionIndex, safeSections]);
 
   const validateCurrentSection = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -111,14 +132,15 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
     setErrors(newErrors);
     
     if (!isValid) {
-      // Find first section with error and navigate to it
-      for (let i = 0; i < sections.length; i++) {
-        const sectionHasError = sections[i].questions.some(q => newErrors[q.id]);
-        if (sectionHasError) {
-          setCurrentSectionIndex(i);
-          break;
+              // Find first section with error and navigate to it
+        for (let i = 0; i < safeSections.length; i++) {
+          const sectionQuestions = safeSections[i]?.questions || [];
+          const sectionHasError = sectionQuestions.some(q => newErrors[q.id]);
+          if (sectionHasError) {
+            setCurrentSectionIndex(i);
+            break;
+          }
         }
-      }
     }
 
     return isValid;
@@ -136,11 +158,44 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
     return response?.response || '';
   };
 
-  if (!currentSection) {
+  if (!currentSection || safeSections.length === 0) {
     return (
       <Card>
         <CardContent>
-          <Typography>No questions available</Typography>
+          <Typography variant="h6" gutterBottom>No questions available</Typography>
+          <Alert severity="error" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              Debug information:
+            </Typography>
+            <Typography variant="body2">
+              • Sections received: {safeSections?.length || 0} sections
+            </Typography>
+            <Typography variant="body2">
+              • Current section index: {currentSectionIndex}
+            </Typography>
+            {safeSections && safeSections.length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="body2">
+                  • First section title: "{safeSections[0]?.title || 'No title'}"
+                </Typography>
+                <Typography variant="body2">
+                  • First section questions: {safeSections[0]?.questions?.length || 0}
+                </Typography>
+                {safeSections[0]?.questions && safeSections[0].questions.length > 0 && (
+                  <Typography variant="body2">
+                    • First question: "{safeSections[0].questions[0]?.text?.substring(0, 50) || 'No text'}..."
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Alert>
+          {onCancel && (
+            <Box sx={{ mt: 2 }}>
+              <Button variant="outlined" onClick={onCancel}>
+                Close
+              </Button>
+            </Box>
+          )}
         </CardContent>
       </Card>
     );
@@ -152,7 +207,7 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
         {showProgress && (
           <QuestionnaireProgress
             currentSection={currentSectionIndex + 1}
-            totalSections={sections.length}
+            totalSections={safeSections.length}
             currentQuestion={currentQuestionIndex}
             totalQuestions={respondableQuestions.length}
             title={title}
@@ -182,7 +237,7 @@ export const QuestionnaireRenderer: React.FC<QuestionnaireRendererProps> = ({
             </Alert>
           )}
 
-          {currentSection.questions.map((question) => (
+          {(currentSection.questions || []).map((question) => (
             <QuestionComponent
               key={question.id}
               question={question}

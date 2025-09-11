@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardContent, List, TextField, IconButton, Stack, Typography, Divider, Fab } from '@mui/material';
+import { Card, CardHeader, CardContent, List, TextField, IconButton, Stack, Typography, Divider, Fab, Box } from '@mui/material';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { MessageItem } from './MessageItem';
@@ -78,6 +78,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       className="flex flex-col overflow-hidden relative"
       sx={{ 
         height: '100%',
+        minHeight: { xs: '400px', sm: '500px', md: '100%' },
         maxHeight: '100%',
         display: 'flex',
         flexDirection: 'column'
@@ -85,18 +86,38 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     >
       <CardHeader 
         title={
-          <Typography variant="h3" className="text-center">
+          <Typography 
+            variant="h3" 
+            className="text-center"
+            sx={{ 
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+              lineHeight: { xs: 1.2, sm: 1.3 }
+            }}
+          >
             {selectedNPC ? `Chat with ${selectedNPC.name}` : 'Chat History'}
           </Typography>
         }
         subheader={
           selectedNPC && (
-            <Typography variant="body2" color="text.secondary" className="text-center">
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              className="text-center"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                lineHeight: 1.4,
+                px: { xs: 1, sm: 2 }
+              }}
+            >
               {selectedNPC.description}
             </Typography>
           )
         }
-        sx={{ flexShrink: 0 }}
+        sx={{ 
+          flexShrink: 0,
+          pb: { xs: 1, sm: 2 },
+          pt: { xs: 1.5, sm: 2 }
+        }}
       />
       <Divider />
       
@@ -109,32 +130,60 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           minHeight: 0 
         }}
       >
-        <div 
+        <Box 
           className="flex-1 overflow-auto medieval-scroll"
           ref={messagesContainerRef}
           onScroll={handleScroll}
-          style={{ flex: 1, minHeight: 0 }}
+          sx={{ 
+            flex: 1, 
+            minHeight: { xs: '200px', sm: '300px', md: 0 },
+            maxHeight: { xs: 'calc(60vh)', sm: 'calc(70vh)', md: 'none' },
+            overflowY: 'auto',
+            overflowX: 'hidden'
+          }}
         >
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <Typography variant="body1" color="text.secondary" className="text-center">
+              <Typography 
+                variant="body1" 
+                color="text.secondary" 
+                className="text-center"
+                sx={{ 
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  px: { xs: 2, sm: 3 }
+                }}
+              >
                 {selectedNPC ? 'Start a conversation...' : 'Select an NPC to start chatting'}
               </Typography>
             </div>
           ) : (
-            <List className="py-2">
+            <List 
+              sx={{ 
+                py: { xs: 1, sm: 2 },
+                px: { xs: 1, sm: 2 }
+              }}
+            >
               {messages.map((message) => (
                 <MessageItem key={message.id} message={message} />
               ))}
               <div ref={messagesEndRef} />
             </List>
           )}
-        </div>
+        </Box>
 
         <Divider />
         
-        <div className="p-4" style={{ flexShrink: 0 }}>
-          <Stack direction="row" spacing={2} alignItems="flex-end">
+        <Box 
+          sx={{ 
+            p: { xs: 2, sm: 3, md: 4 },
+            flexShrink: 0
+          }}
+        >
+          <Stack 
+            direction="row" 
+            spacing={{ xs: 1, sm: 2 }} 
+            alignItems="flex-end"
+          >
             <TextField
               fullWidth
               multiline
@@ -147,17 +196,30 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               disabled={!selectedNPC || isLoading}
               variant="outlined"
               size="small"
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                  minHeight: { xs: '40px', sm: '56px' }
+                },
+                '& .MuiInputBase-input': {
+                  py: { xs: 1, sm: 1.5 }
+                }
+              }}
             />
             <IconButton
               onClick={handleSendMessage}
               disabled={!messageInput.trim() || !selectedNPC || isLoading}
               color="primary"
-              className="p-3"
+              sx={{
+                p: { xs: 2, sm: 3 },
+                minWidth: { xs: '44px', sm: '48px' },
+                minHeight: { xs: '44px', sm: '48px' }
+              }}
             >
-              <SendOutlinedIcon />
+              <SendOutlinedIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
             </IconButton>
           </Stack>
-        </div>
+        </Box>
       </CardContent>
 
       {/* Scroll to bottom button - only show when not auto-scrolling */}

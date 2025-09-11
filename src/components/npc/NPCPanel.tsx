@@ -32,20 +32,55 @@ export const NPCPanel: React.FC<NPCPanelProps> = ({
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader 
         title={
-          <Typography variant="h3" className="text-center">
+          <Typography 
+            variant="h3" 
+            className="text-center"
+            sx={{ 
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
+              fontWeight: { xs: 600, sm: 700 }
+            }}
+          >
             Available NPCs
           </Typography>
         }
+        sx={{ 
+          py: { xs: 1.5, sm: 2 },
+          pb: { xs: 1, sm: 1.5 }
+        }}
       />
       <Divider />
-      <CardContent className="p-0 flex-1 overflow-auto medieval-scroll">
-        <div className="p-4 space-y-4">
+      <CardContent 
+        className="p-0 flex-1 overflow-auto medieval-scroll"
+        sx={{ 
+          p: 0,
+          '&:last-child': { pb: 0 }
+        }}
+      >
+        <div 
+          className="space-y-4"
+          style={{ 
+            padding: window.innerWidth < 600 ? '8px 16px' : '16px' 
+          }}
+        >
           {onlineNPCs.length > 0 && (
             <div>
-              <Typography variant="h6" color="success.main" className="mb-2 px-2">
+              <Typography 
+                variant="h6" 
+                color="success.main" 
+                className="mb-2 px-2"
+                sx={{ 
+                  fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' },
+                  fontWeight: { xs: 500, sm: 600 }
+                }}
+              >
                 Online ({onlineNPCs.length})
               </Typography>
-              <List dense>
+              <List 
+                dense
+                sx={{ 
+                  py: { xs: 0.5, sm: 1 }
+                }}
+              >
                 {onlineNPCs.map((npc) => (
                   <NPCListItem
                     key={npc.id}
@@ -65,10 +100,23 @@ export const NPCPanel: React.FC<NPCPanelProps> = ({
 
           {busyNPCs.length > 0 && (
             <div>
-              <Typography variant="h6" color="warning.main" className="mb-2 px-2">
+              <Typography 
+                variant="h6" 
+                color="warning.main" 
+                className="mb-2 px-2"
+                sx={{ 
+                  fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' },
+                  fontWeight: { xs: 500, sm: 600 }
+                }}
+              >
                 Busy ({busyNPCs.length})
               </Typography>
-              <List dense>
+              <List 
+                dense
+                sx={{ 
+                  py: { xs: 0.5, sm: 1 }
+                }}
+              >
                 {busyNPCs.map((npc) => (
                   <NPCListItem
                     key={npc.id}
@@ -88,10 +136,23 @@ export const NPCPanel: React.FC<NPCPanelProps> = ({
 
           {offlineNPCs.length > 0 && (
             <div>
-              <Typography variant="h6" color="error.main" className="mb-2 px-2">
+              <Typography 
+                variant="h6" 
+                color="error.main" 
+                className="mb-2 px-2"
+                sx={{ 
+                  fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' },
+                  fontWeight: { xs: 500, sm: 600 }
+                }}
+              >
                 Offline ({offlineNPCs.length})
               </Typography>
-              <List dense>
+              <List 
+                dense
+                sx={{ 
+                  py: { xs: 0.5, sm: 1 }
+                }}
+              >
                 {offlineNPCs.map((npc) => (
                   <NPCListItem
                     key={npc.id}

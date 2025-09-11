@@ -62,7 +62,14 @@ export const GameControls: React.FC<GameControlsProps> = ({
     <Card>
       <CardHeader 
         title={
-          <Typography variant="h3" className="text-center">
+          <Typography 
+            variant="h3" 
+            className="text-center"
+            sx={{ 
+              fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+              fontWeight: { xs: 600, sm: 700 }
+            }}
+          >
             Game Controls
           </Typography>
         }
@@ -75,11 +82,22 @@ export const GameControls: React.FC<GameControlsProps> = ({
                   label={`ID: ${String(sessionId)}`}
                   variant="outlined"
                   color="default"
+                  sx={{ 
+                    display: { xs: 'none', sm: 'inline-flex' },
+                    fontSize: { sm: '0.75rem' }
+                  }}
                 />
               </Tooltip>
             </Stack>
           ) : null
         }
+        sx={{ 
+          py: { xs: 1, sm: 2 },
+          '& .MuiCardHeader-action': {
+            m: 0,
+            alignSelf: 'center'
+          }
+        }}
       />
       <Divider />
       <CardContent className="py-3">

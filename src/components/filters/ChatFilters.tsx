@@ -43,22 +43,50 @@ export const ChatFilters: React.FC<ChatFiltersProps> = ({
 
   return (
     <Card>
-      <CardContent className="py-1">
-        <Stack spacing={1}>
+      <CardContent 
+        sx={{ 
+          py: { xs: 1, sm: 1.5 },
+          px: { xs: 1.5, sm: 2 },
+          '&:last-child': { pb: { xs: 1, sm: 1.5 } }
+        }}
+      >
+        <Stack spacing={{ xs: 1, sm: 1.5 }}>
           {/* Inline Header Row */}
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <FilterAltOutlinedIcon fontSize="small" />
-              <Typography variant="body2" fontWeight="medium">Filters</Typography>
+          <Stack 
+            direction="row" 
+            alignItems="center" 
+            justifyContent="space-between"
+            flexWrap="wrap"
+            gap={1}
+          >
+            <Stack 
+              direction="row" 
+              alignItems="center" 
+              spacing={{ xs: 0.5, sm: 1 }}
+            >
+              <FilterAltOutlinedIcon 
+                sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} 
+              />
+              <Typography 
+                variant="body2" 
+                fontWeight="medium"
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
+                Filters
+              </Typography>
             </Stack>
             {hasActiveFilters && (
               <Button
                 size="small"
-                startIcon={<ClearOutlinedIcon />}
+                startIcon={<ClearOutlinedIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }} />}
                 onClick={onClearFilters}
                 color="secondary"
                 variant="text"
-                sx={{ minWidth: 'auto', px: 1 }}
+                sx={{ 
+                  minWidth: 'auto', 
+                  px: { xs: 0.5, sm: 1 },
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
               >
                 Clear
               </Button>

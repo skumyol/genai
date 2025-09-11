@@ -100,6 +100,123 @@ body {
   background: var(--mui-palette-primary-dark);
 }
 
+/* Mobile-specific improvements */
+@media (max-width: 599px) {
+  /* Improve touch targets */
+  .MuiIconButton-root {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  .MuiButton-root {
+    min-height: 36px !important;
+  }
+  
+  /* Better text sizing for mobile */
+  .MuiTypography-h1 {
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiTypography-h2 {
+    font-size: 1.125rem !important;
+  }
+  
+  .MuiTypography-h3 {
+    font-size: 1rem !important;
+  }
+  
+  /* Improve form inputs */
+  .MuiTextField-root .MuiInputBase-input {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+  
+  /* Better chip sizing */
+  .MuiChip-root {
+    height: 28px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  /* Improve scrollable areas */
+  .medieval-scroll::-webkit-scrollbar {
+    width: 6px !important;
+  }
+  
+  /* Ensure messages are visible on mobile */
+  .MuiListItem-root {
+    display: flex !important;
+    padding: 8px 16px !important;
+  }
+  
+  /* Force message visibility */
+  .MuiList-root {
+    padding: 8px !important;
+    min-height: 100px !important;
+  }
+  
+  /* Debug: temporary borders to see layout */
+  .MuiCard-root {
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  /* Mobile AppBar fixes */
+  .MuiAppBar-root {
+    min-height: 48px !important;
+  }
+  
+  .MuiToolbar-root {
+    min-height: 48px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  
+  /* Ensure no overflow on mobile header */
+  .MuiToolbar-root > * {
+    flex-shrink: 1;
+  }
+  
+  /* Mobile info bar styling */
+  .mobile-info-bar {
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* Compact chips on mobile */
+  .MuiChip-small {
+    height: 22px !important;
+    font-size: 0.6rem !important;
+  }
+  
+  .MuiChip-small .MuiChip-label {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+}
+
+/* Tablet improvements */
+@media (min-width: 600px) and (max-width: 959px) {
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* Prevent horizontal scroll and ensure proper text wrapping */
+* {
+  box-sizing: border-box;
+}
+
+body, html {
+  overflow-x: hidden;
+}
+
+/* Improve focus indicators for keyboard navigation */
+.MuiButton-root:focus,
+.MuiIconButton-root:focus,
+.MuiListItemButton-root:focus {
+  outline: 2px solid var(--mui-palette-primary-main) !important;
+  outline-offset: 2px !important;
+}
+
 /* Custom animation for status badges */
 @keyframes pulse-glow {
   0%, 100% {

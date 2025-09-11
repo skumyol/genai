@@ -31,7 +31,9 @@ export const useQuestionnaire = () => {
     const loadQuestionnaires = async () => {
       if (questionnaireState.questionnaires.length === 0) {
         try {
+          console.log('[useQuestionnaire] Loading questionnaires from CSV...');
           const questionnaires = await loadQuestionnaireFromCSV();
+          console.log('[useQuestionnaire] Loaded questionnaires:', questionnaires);
           dispatch(setQuestionnaires(questionnaires));
         } catch (error) {
           console.error('Failed to load questionnaires:', error);
@@ -42,6 +44,20 @@ export const useQuestionnaire = () => {
     loadQuestionnaires();
   }, [dispatch, questionnaireState.questionnaires.length]);
 
+  // Auto-open pre-game questionnaire once data is loaded for new users (no user_id yet)
+  useEffect(() => {
+    try {
+      const hasUserId = !!localStorage.getItem('user_id');
+      if (hasUserId) return;
+      if (!questionnaireState.userProgress) return;
+      if (questionnaireState.isOpen || questionnaireState.currentQuestionnaire) return;
+      const preCompleted = questionnaireState.userProgress.completedQuestionnaires.includes('questionnaire_pre_game');
+      if (preCompleted) return;
+      const pre = questionnaireState.questionnaires.find(q => q.phase === StudyPhase.PRE_GAME);
+      if (pre) dispatch(setCurrentQuestionnaire(pre));
+    } catch {}
+  }, [dispatch, questionnaireState.questionnaires.length, questionnaireState.userProgress, questionnaireState.isOpen, questionnaireState.currentQuestionnaire]);
+
   // Initialize user progress if not exists
   const initializeUser = useCallback((userId: string) => {
     if (!questionnaireState.userProgress) {
@@ -51,9 +67,14 @@ export const useQuestionnaire = () => {
 
   // Show questionnaire for specific phase
   const showQuestionnaire = useCallback((phase: StudyPhase) => {
+    console.log('[useQuestionnaire] Showing questionnaire for phase:', phase);
+    console.log('[useQuestionnaire] Available questionnaires:', questionnaireState.questionnaires);
     const questionnaire = questionnaireState.questionnaires.find(q => q.phase === phase);
+    console.log('[useQuestionnaire] Found questionnaire:', questionnaire);
     if (questionnaire) {
       dispatch(setCurrentQuestionnaire(questionnaire));
+    } else {
+      console.log('[useQuestionnaire] No questionnaire found for phase:', phase);
     }
   }, [dispatch, questionnaireState.questionnaires]);
 

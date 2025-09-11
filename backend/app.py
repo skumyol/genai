@@ -693,10 +693,18 @@ social_service = SocialService(agent_llm_configs=_social_agent_llm_configs)
  
 # Database connection helper (must be defined before blueprint uses it)
 def get_db():
-    """Get database connection for current context"""
+    """Get database connection for current context with sane concurrency settings"""
     if 'db' not in g:
-        g.db = sqlite3.connect(DB_PATH)
+        # Add timeout and allow usage across threads within this process
+        g.db = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
         g.db.row_factory = sqlite3.Row
+        try:
+            cur = g.db.cursor()
+            cur.execute("PRAGMA journal_mode=WAL;")
+            cur.execute("PRAGMA busy_timeout=30000;")
+            cur.execute("PRAGMA synchronous=NORMAL;")
+        except Exception:
+            pass
     return g.db
 
 @app.teardown_appcontext

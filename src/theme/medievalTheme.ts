@@ -117,7 +117,75 @@ const theme = createTheme({
     '0px 44px 88px rgba(0,0,0,0.3)',
     '0px 46px 92px rgba(0,0,0,0.3)',
     '0px 48px 96px rgba(0,0,0,0.3)'
-  ]
+  ],
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 960,
+      lg: 1280,
+      xl: 1920,
+    },
+  },
+  components: {
+    MuiContainer: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          paddingLeft: theme.spacing(2),
+          paddingRight: theme.spacing(2),
+          [theme.breakpoints.up('sm')]: {
+            paddingLeft: theme.spacing(3),
+            paddingRight: theme.spacing(3),
+          },
+          [theme.breakpoints.up('md')]: {
+            paddingLeft: theme.spacing(4),
+            paddingRight: theme.spacing(4),
+          },
+        }),
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          [theme.breakpoints.down('sm')]: {
+            minHeight: '36px',
+            fontSize: '0.75rem',
+          },
+        }),
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          [theme.breakpoints.down('sm')]: {
+            minWidth: '44px',
+            minHeight: '44px',
+            padding: '6px',
+          },
+        }),
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          [theme.breakpoints.down('sm')]: {
+            '& .MuiInputBase-input': {
+              fontSize: '16px', // Prevents zoom on iOS
+            },
+          },
+        }),
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          [theme.breakpoints.down('sm')]: {
+            margin: theme.spacing(0.5),
+          },
+        }),
+      },
+    },
+  },
 });
 
 export default theme;

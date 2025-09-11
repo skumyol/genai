@@ -33,27 +33,55 @@ export const NPCListItem: React.FC<NPCListItemProps> = ({
         selected={isSelected}
         onClick={() => onSelect(npc.id)}
         onDoubleClick={() => onDoubleClick?.(npc)}
-        className="rounded-lg mb-2 transition-all hover:scale-[1.02] hover:shadow-lg"
+        className="rounded-lg transition-all hover:scale-[1.02] hover:shadow-lg"
+        sx={{
+          mb: { xs: 1, sm: 2 },
+          py: { xs: 1, sm: 1.5 },
+          px: { xs: 1, sm: 2 },
+          minHeight: { xs: '60px', sm: '80px' }
+        }}
       >
-        <ListItemAvatar>
+        <ListItemAvatar sx={{ mr: { xs: 1, sm: 2 } }}>
           <StatusBadge status={npc.status}>
             <Avatar 
               src={npc.avatar} 
               alt={npc.name}
-              sx={{ width: 40, height: 40 }}
+              sx={{ 
+                width: { xs: 32, sm: 40 }, 
+                height: { xs: 32, sm: 40 },
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
             />
           </StatusBadge>
         </ListItemAvatar>
         <ListItemText
           primary={
-            <Typography variant="body1" className="font-semibold">
+            <Typography 
+              variant="body1" 
+              className="font-semibold"
+              sx={{ 
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                fontWeight: { xs: 600, sm: 700 }
+              }}
+            >
               {npc.name}
             </Typography>
           }
           primaryTypographyProps={{ component: 'span' }}
           secondary={
-            <div className="space-y-1">
-              <Typography variant="body2" color="text.secondary">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  lineHeight: 1.3,
+                  display: '-webkit-box',
+                  WebkitLineClamp: { xs: 2, sm: 3 },
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}
+              >
                 {npc.description}
               </Typography>
               <Typography 
@@ -63,12 +91,45 @@ export const NPCListItem: React.FC<NPCListItemProps> = ({
                   npc.status === 'busy' ? 'warning.main' : 'error.main'
                 }
                 className="font-medium"
+                sx={{ 
+                  fontSize: { xs: '0.625rem', sm: '0.75rem' },
+                  display: { xs: 'none', sm: 'block' }
+                }}
               >
                 {formatNPCStatus(npc.status)}
               </Typography>
-              <Stack direction="row" spacing={1} className="mt-1">
-                <Button size="small" variant={isPlayer ? 'contained' : 'outlined'} onClick={(e) => { e.stopPropagation(); onPlayAs?.(npc); }}>Play as</Button>
-                <Button size="small" variant={isTalkTarget ? 'contained' : 'outlined'} disabled={!activePlayerNpcId || activePlayerNpcId === npc.id} onClick={(e) => { e.stopPropagation(); onTalk?.(npc); }}>Talk</Button>
+              <Stack 
+                direction="row" 
+                spacing={{ xs: 0.5, sm: 1 }} 
+                className="mt-1"
+              >
+                <Button 
+                  size="small" 
+                  variant={isPlayer ? 'contained' : 'outlined'} 
+                  onClick={(e) => { e.stopPropagation(); onPlayAs?.(npc); }}
+                  sx={{
+                    fontSize: { xs: '0.625rem', sm: '0.75rem' },
+                    minWidth: { xs: '50px', sm: '64px' },
+                    py: { xs: 0.25, sm: 0.5 },
+                    px: { xs: 0.75, sm: 1 }
+                  }}
+                >
+                  Play as
+                </Button>
+                <Button 
+                  size="small" 
+                  variant={isTalkTarget ? 'contained' : 'outlined'} 
+                  disabled={!activePlayerNpcId || activePlayerNpcId === npc.id} 
+                  onClick={(e) => { e.stopPropagation(); onTalk?.(npc); }}
+                  sx={{
+                    fontSize: { xs: '0.625rem', sm: '0.75rem' },
+                    minWidth: { xs: '40px', sm: '64px' },
+                    py: { xs: 0.25, sm: 0.5 },
+                    px: { xs: 0.75, sm: 1 }
+                  }}
+                >
+                  Talk
+                </Button>
               </Stack>
             </div>
           }

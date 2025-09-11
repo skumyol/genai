@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Provider } from 'react-redux';
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import { Stack, Button, AppBar, Toolbar, Typography, IconButton, Container, Box, Chip, Tooltip } from '@mui/material';
+import { Stack, Button, AppBar, Toolbar, Typography, IconButton, Container, Box, Chip, Tooltip, Modal, CircularProgress, Backdrop } from '@mui/material';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 // import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
@@ -33,6 +33,12 @@ import { Message, NPC, Character } from '../types/schema';
 import { ensureUserId, ensureUserSessions, getUserTestSession, setActiveSession, createSession, fetchSettings, getSession, getSessionMessages, getSessionNPCs, startGame, stopGame, saveSession, listSelfRuns, importIntoSession, sendPlayerChatWithStats, cloneSessionForUser, listSessionsFiltered, listBaseSessionsFiltered, resetUserSessions, getSessionDayPeriods, getActiveSession } from '../api/client';
 import { useQuestionnaire } from '../hooks/useQuestionnaire';
 
+/**
+ * URL Parameters:
+ * - ?admin=1 - Enable admin mode
+ * - ?fast=1 - Enable fast test mode (reduced time/message requirements)
+ * - ?newuser=1 - Clear all localStorage and start with fresh user ID
+ */
 const MedievalGameContent: React.FC = () => {
   const {
     gameState,
@@ -78,8 +84,30 @@ const MedievalGameContent: React.FC = () => {
   const [npcs, setNpcs] = useState<NPC[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [playerSessionId, setPlayerSessionId] = useState<string>('');
-  const [sessionId, setSessionId] = useState<string | null>(localStorage.getItem('session_id'));
-  const [currentUserId, setCurrentUserId] = useState<string | null>(localStorage.getItem('user_id'));
+  const [sessionId, setSessionId] = useState<string | null>(() => {
+    // Check for newuser parameter and clear localStorage if needed
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('newuser') === '1') {
+        localStorage.removeItem('session_id');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('guide_dismissed');
+        console.log('🆕 New user mode activated - localStorage cleared');
+        return null;
+      }
+    } catch {}
+    return localStorage.getItem('session_id');
+  });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
+    // Check for newuser parameter first
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('newuser') === '1') {
+        return null; // Will be set by the useEffect
+      }
+    } catch {}
+    return localStorage.getItem('user_id');
+  });
   const [sessionName, setSessionName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedNPCForDetails, setSelectedNPCForDetails] = useState<NPC | null>(null);
@@ -102,13 +130,16 @@ const MedievalGameContent: React.FC = () => {
       return false;
     }
   }, []);
-  const MIN_TEST_MINUTES = isFastMode ? 0 : 15;
+  const MIN_TEST_MINUTES = isFastMode ? 0 : 12;
   const MIN_TEST_MESSAGES = isFastMode ? 1 : 20;
   const [currentTestIndex, setCurrentTestIndex] = useState<0 | 1 | null>(null);
   const [testStartAt, setTestStartAt] = useState<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [userMsgCount, setUserMsgCount] = useState<number>(0);
   const [sessionSurveyShown, setSessionSurveyShown] = useState<boolean>(false);
+  // Loader modal for between-test transitions
+  const [showTestLoader, setShowTestLoader] = useState<boolean>(false);
+  const [loaderMessage, setLoaderMessage] = useState<string>('');
   // Admin-only features (e.g., Test 0–6 quick buttons)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
@@ -347,7 +378,7 @@ const MedievalGameContent: React.FC = () => {
   const playerNPC = npcs.find(npc => npc.id === playerNpcId) || null;
   const talkTargetNPC = npcs.find(npc => npc.id === talkTargetNpcId) || null;
 
-  // Bootstrap: ensure user id and load settings from backend
+  // Bootstrap: load settings and optionally restore existing user/session
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -358,101 +389,105 @@ const MedievalGameContent: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const qAdmin = params.get('admin');
         if (mounted) setIsAdmin(role === 'admin' || adminFlag === '1' || qAdmin === '1');
+        
+        // Check for newuser parameter to reset user data
+        const newUser = params.get('newuser');
+        if (newUser === '1') {
+          localStorage.removeItem('user_id');
+          localStorage.removeItem('session_id');
+          localStorage.removeItem('guide_dismissed');
+          try { resetQuestionnaire(); } catch {}
+          console.log('🔄 Fresh user session started - all data cleared due to ?newuser=1 parameter');
+        }
       } catch {}
 
       try {
-        const uid = await ensureUserId();
-        setCurrentUserId(uid);
-        
-        // Initialize questionnaire system for this user
-        initializeUser(uid);
-        
-        // Ensure user has their default Test 0 session
-        await ensureUserSessions(uid);
-        
-        // Check if there's a saved session in localStorage
-        const savedSessionId = localStorage.getItem('session_id');
-        let shouldLoadDefaultSession = true;
-        
-        if (savedSessionId) {
-          try {
-            // Verify the saved session exists and belongs to this user
-            const session = await getSession(savedSessionId);
-            if (session && session.game_settings?.experiment?.user_id === uid) {
-              // Set as active session in backend
-              await setActiveSession(uid, savedSessionId);
-              
-              // Load the saved session
-              setSessionId(savedSessionId);
-              if (session?.name) setSessionName(String(session.name));
-              
-              try {
-            const hist = await getSessionMessages(savedSessionId, 300);
-                const loaded = (hist.messages || []).map((m: any) => {
-                  const senderName = m.sender || '';
-                  const npc = npcs.find(n => n.name === senderName) || null;
-                  
-                  return {
-                    id: m.message_id,
-                    type: npc ? MessageType.NPC : MessageType.SYSTEM,
-                    content: m.message_text,
-                    timestamp: new Date(m.timestamp),
-                    day: Number(m.day || 1),
-                    timePeriod: String(m.time_period || '').toLowerCase() as TimePeriod,
-                    npcId: npc ? npc.id : null,
-                    npcName: senderName || null
-                  };
-                }) as Message[];
-                if (isAdmin) {
-                  setMessages(loaded.slice(-MAX_RENDERED_MESSAGES));
-                } else {
-                  setMessages([]);
-                }
-              } catch {
-                setMessages([]);
-              }
-              
-              setCurrentDay(Number(session.current_day ?? 1));
-              setCurrentTimePeriod(normalizePeriod(session.current_time_period));
-              setGameState(normalizeGameState(session.game_settings?.client_state?.game_state));
-              clearChatFilters(); // Clear filters when loading saved session
-              // Removed SSE stream opening - using direct request-response now
-              shouldLoadDefaultSession = false;
-            }
-          } catch (e) {
-            console.warn('Saved session not valid, will load default:', e);
-            localStorage.removeItem('session_id');
+        // Allow explicit login via URL param ?user= or ?user_id=
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const urlUser = params.get('user') || params.get('user_id');
+          if (urlUser) {
+            localStorage.setItem('user_id', urlUser);
           }
-        }
-        
-        if (shouldLoadDefaultSession && isAdmin) {
-          // Load the user's Test 0 session by default
-          try {
-            const test0SessionId = await getUserTestSession(uid, 0);
-            await setActiveSession(uid, test0SessionId);
-            localStorage.setItem('session_id', test0SessionId);
-            setSessionId(test0SessionId);
-            setSessionName('Test 0: Fresh World');
-            // Removed SSE stream opening - using direct request-response now
-            
-            setMessages([{
-              id: `msg-${Date.now()}`,
-              type: MessageType.SYSTEM,
-              content: `🏰 Admin: Loaded Test 0 (Fresh World).`,
-              timestamp: new Date(),
-              day: currentDay,
-              timePeriod: currentTimePeriod,
-              npcId: null,
-              npcName: null
-            }]);
-          } catch (e) {
-            console.warn('Failed to load default Test 0 session (admin):', e);
-          }
-        }
+        } catch {}
 
-        // Note: session auto-switch logic already exists elsewhere in the app flow.
-      } catch (error: unknown) {
-        console.warn('ensureUserId failed:', error);
+        const existingUid = localStorage.getItem('user_id');
+        if (existingUid) {
+          setCurrentUserId(existingUid);
+          // Initialize questionnaire state for existing user
+          initializeUser(existingUid);
+          // Ensure user sessions are present for existing users
+          try { await ensureUserSessions(existingUid); } catch {}
+          // Attempt to restore saved session
+          const savedSessionId = localStorage.getItem('session_id');
+          let shouldLoadDefaultSession = true;
+          if (savedSessionId) {
+            try {
+              const session = await getSession(savedSessionId);
+              if (session && session.game_settings?.experiment?.user_id === existingUid) {
+                await setActiveSession(existingUid, savedSessionId);
+                setSessionId(savedSessionId);
+                if (session?.name) setSessionName(String(session.name));
+                try {
+                  const hist = await getSessionMessages(savedSessionId, 300);
+                  const loaded = (hist.messages || []).map((m: any) => {
+                    const senderName = m.sender || '';
+                    const npc = npcs.find(n => n.name === senderName) || null;
+                    return {
+                      id: m.message_id,
+                      type: npc ? MessageType.NPC : MessageType.SYSTEM,
+                      content: m.message_text,
+                      timestamp: new Date(m.timestamp),
+                      day: Number(m.day || 1),
+                      timePeriod: String(m.time_period || '').toLowerCase() as TimePeriod,
+                      npcId: npc ? npc.id : null,
+                      npcName: senderName || null
+                    };
+                  }) as Message[];
+                  if (isAdmin) setMessages(loaded.slice(-MAX_RENDERED_MESSAGES)); else setMessages([]);
+                } catch { setMessages([]); }
+                setCurrentDay(Number(session.current_day ?? 1));
+                setCurrentTimePeriod(normalizePeriod(session.current_time_period));
+                setGameState(normalizeGameState(session.game_settings?.client_state?.game_state));
+                clearChatFilters();
+                shouldLoadDefaultSession = false;
+              }
+            } catch (e) {
+              console.warn('Saved session not valid, will load default:', e);
+              localStorage.removeItem('session_id');
+            }
+          }
+          if (shouldLoadDefaultSession && isAdmin) {
+            try {
+              const test0SessionId = await getUserTestSession(existingUid, 0);
+              await setActiveSession(existingUid, test0SessionId);
+              localStorage.setItem('session_id', test0SessionId);
+              setSessionId(test0SessionId);
+              setSessionName('Test 0: Fresh World');
+              setMessages([{
+                id: `msg-${Date.now()}`,
+                type: MessageType.SYSTEM,
+                content: `🏰 Admin: Loaded Test 0 (Fresh World).`,
+                timestamp: new Date(),
+                day: currentDay,
+                timePeriod: currentTimePeriod,
+                npcId: null,
+                npcName: null
+              }]);
+            } catch (e) {
+              console.warn('Failed to load default Test 0 session (admin):', e);
+            }
+          }
+        } else {
+          // No user yet — initialize questionnaire flow for anonymous user
+          try {
+            initializeUser('anonymous');
+            // Proactively open pre-game once initialized; useQuestionnaire also auto-opens after data loads
+            try { showQuestionnaire(StudyPhase.PRE_GAME); } catch {}
+          } catch {}
+        }
+      } catch (e) {
+        console.warn('bootstrap user/session restore failed:', e);
       }
       
       try {
@@ -495,6 +530,34 @@ const MedievalGameContent: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
+  // Expose testing utilities to window for console access
+  useEffect(() => {
+    (window as any).testUtils = {
+      getNewUser: () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('newuser', '1');
+        window.location.href = url.toString();
+      },
+      clearUserData: () => {
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('session_id');
+        localStorage.removeItem('guide_dismissed');
+        console.log('User data cleared. Refresh page to see effect.');
+      },
+      getCurrentUserId: () => localStorage.getItem('user_id'),
+      enableFastMode: () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('fast', '1');
+        window.location.href = url.toString();
+      }
+    };
+    console.log('🛠️ Test utilities available: window.testUtils');
+    console.log('- testUtils.getNewUser() - Reload with fresh user ID');
+    console.log('- testUtils.clearUserData() - Clear localStorage');
+    console.log('- testUtils.getCurrentUserId() - Show current user ID');
+    console.log('- testUtils.enableFastMode() - Enable fast mode');
+  }, []);
+
   // Update message NPC IDs when NPCs are loaded
   useEffect(() => {
     if (npcs.length > 0) {
@@ -529,10 +592,11 @@ const MedievalGameContent: React.FC = () => {
     })();
   }, [sessionId]);
 
-  // Show demographics first (pre-game questionnaire)
+  // Show demographics first (pre-game questionnaire) only for new users (no user_id yet)
   useEffect(() => {
     if (!userProgress || isQuestionnaireOpen) return;
-    if (userProgress.currentPhase === StudyPhase.PRE_GAME && !userProgress.completedQuestionnaires.includes('questionnaire_pre_game')) {
+    const hasUserId = !!localStorage.getItem('user_id');
+    if (!hasUserId && userProgress.currentPhase === StudyPhase.PRE_GAME && !userProgress.completedQuestionnaires.includes('questionnaire_pre_game')) {
       showQuestionnaire(StudyPhase.PRE_GAME);
     }
   }, [userProgress, isQuestionnaireOpen, showQuestionnaire]);
@@ -553,7 +617,9 @@ const MedievalGameContent: React.FC = () => {
     if (timeOk && msgOk) {
       // If first test in this part is done, start second test
       if (currentTestIndex === 0) {
-        startTest(1);
+        const phase = userProgress?.currentPhase || StudyPhase.SESSION_1;
+        const testNumber = phase === StudyPhase.SESSION_1 ? 2 : 4;
+        showLoaderAndExecute(`Starting Test ${testNumber} of 4...`, () => startTest(1));
       } else if (currentTestIndex === 1 && !sessionSurveyShown) {
         setSessionSurveyShown(true);
         // End of part: open appropriate questionnaire
@@ -580,10 +646,32 @@ const MedievalGameContent: React.FC = () => {
     }
   }, [sessionId, userProgress, setStudySessionId]);
 
+  // Show loading modal for 3 seconds between tests
+  const showLoaderAndExecute = (message: string, callback: () => void) => {
+    setLoaderMessage(message);
+    setShowTestLoader(true);
+    
+    setTimeout(() => {
+      setShowTestLoader(false);
+      callback();
+    }, 3000);
+  };
+
   // Start a planned test by importing a base checkpoint into a user session
   const startTest = async (index: 0 | 1) => {
     try {
-      const uid = await ensureUserId();
+      const uid = localStorage.getItem('user_id');
+      if (!uid) {
+        // Ensure the pre-game questionnaire is complete before tests
+        try { showQuestionnaire(StudyPhase.PRE_GAME); } catch {}
+        setMessages(prev => [...prev, {
+          id: `msg-${Date.now()}`,
+          type: MessageType.SYSTEM,
+          content: 'Please complete the pre-game questionnaire first.',
+          timestamp: new Date(), day: currentDay, timePeriod: currentTimePeriod, npcId: null, npcName: null
+        }]);
+        return;
+      }
       // Plans by phase: 2 tests per part
       const plans: Record<string, { sources: string[]; labels: string[]; testIndexes: number[] }> = {
         [StudyPhase.SESSION_1]: {
@@ -650,10 +738,30 @@ const MedievalGameContent: React.FC = () => {
   // Game control handlers
   const handleStartGame = async () => {
     try {
+      // Require user creation to happen after PRE_GAME questionnaire
+      const existingUid = localStorage.getItem('user_id');
+      if (!existingUid) {
+        // Ensure the pre-game questionnaire is visible
+        try { showQuestionnaire(StudyPhase.PRE_GAME); } catch {}
+        setMessages(prev => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}`,
+            type: MessageType.SYSTEM,
+            content: 'Please complete the pre-game questionnaire first.',
+            timestamp: new Date(),
+            day: currentDay,
+            timePeriod: currentTimePeriod,
+            npcId: null,
+            npcName: null,
+          },
+        ]);
+        return;
+      }
       setIsLoading(true);
       // Immediate UI feedback
       setGameState(GameState.RUNNING);
-      const userId = await ensureUserId();
+      const userId = existingUid;
       // ensure a session exists
       let sessionId = localStorage.getItem('session_id');
       if (!sessionId) {
@@ -1007,7 +1115,7 @@ const MedievalGameContent: React.FC = () => {
   };
 
   // Questionnaire handlers
-  const handleQuestionnaireComplete = () => {
+  const handleQuestionnaireComplete = async () => {
     // Persist questionnaire responses to backend ux_metrics for analysis
     try {
       if (currentQuestionnaire && currentResponses) {
@@ -1020,19 +1128,58 @@ const MedievalGameContent: React.FC = () => {
           userId
         }));
         
-        fetch(((import.meta as any).env?.VITE_API_BASE || 'http://localhost:8000/api') + '/questionnaire/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: userId,
+        try {
+          const apiUrl = ((import.meta as any).env?.VITE_API_BASE || 'http://localhost:8000/api') + '/questionnaire/submit';
+          const payload = {
+            // Intentionally allow empty user_id so backend assigns incremental userN
+            user_id: userId || undefined,
             session_id,
             questionnaire_id: currentQuestionnaire.id,
             phase: currentQuestionnaire.phase,
             responses: enrichedResponses
-          })
-        }).catch((err) => {
+          };
+          
+          console.log('Submitting questionnaire to:', apiUrl);
+          console.log('Payload:', JSON.stringify(payload, null, 2));
+          
+          const resp = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          console.log('Response status:', resp.status);
+          console.log('Response headers:', Object.fromEntries(resp.headers.entries()));
+          const data = await resp.json().catch((e) => {
+            console.error('Failed to parse response JSON:', e);
+            return {};
+          });
+          
+          console.log('Response data:', data);
+          
+          const assigned = (data && (data.user_id || (data.data && data.data.user_id))) || '';
+          if (!userId) {
+            if (assigned) {
+              localStorage.setItem('user_id', assigned);
+              setCurrentUserId(assigned);
+              try { await ensureUserSessions(assigned); } catch {}
+            } else {
+              // Fallback: explicitly create a user if submission did not assign one
+              try {
+                const fallbackUid = await ensureUserId();
+                if (fallbackUid) {
+                  localStorage.setItem('user_id', fallbackUid);
+                  setCurrentUserId(fallbackUid);
+                  try { await ensureUserSessions(fallbackUid); } catch {}
+                }
+              } catch (e) {
+                console.warn('Failed to fallback-create user after questionnaire submit');
+              }
+            }
+          }
+        } catch (err) {
           console.error('Failed to submit questionnaire:', err);
-        });
+        }
       }
     } catch (error) {
       console.error('Error in questionnaire submission:', error);
@@ -1050,7 +1197,7 @@ const MedievalGameContent: React.FC = () => {
       } else if (currentPhase === StudyPhase.SESSION_1) {
         advanceStudyPhase(StudyPhase.SESSION_2);
         // Start first mixed test for Session 2
-        startTest(0);
+        showLoaderAndExecute('Starting Test 3 of 4...', () => startTest(0));
       } else if (currentPhase === StudyPhase.SESSION_2) {
         advanceStudyPhase(StudyPhase.FINAL_COMPARE);
         // Show final comparison survey
@@ -1075,20 +1222,65 @@ const MedievalGameContent: React.FC = () => {
     <Box className="h-screen bg-background-default flex flex-col overflow-hidden">
       {/* Enhanced Header */}
       <AppBar position="static" color="primary" className="medieval-shadow flex-shrink-0">
-        <Toolbar className="min-h-[56px]">
-          <SportsEsportsOutlinedIcon className="mr-2" />
-          <Typography variant="h1" className="flex-1 text-center" sx={{ fontSize: '1.75rem' }}>
-            🏰 NarrativeHive
+        <Toolbar 
+          className="min-h-[56px]"
+          sx={{
+            px: { xs: 0.5, sm: 2, md: 3 },
+            minHeight: { xs: 48, sm: 64 },
+            height: { xs: 48, sm: 64 }
+          }}
+        >
+          <SportsEsportsOutlinedIcon 
+            sx={{ 
+              mr: { xs: 0.5, sm: 2 },
+              fontSize: { xs: '1.1rem', sm: '1.5rem' }
+            }} 
+          />
+          <Typography 
+            variant="h1" 
+            className="flex-1 text-center" 
+            sx={{ 
+              fontSize: { xs: '0.9rem', sm: '1.5rem', md: '1.75rem' },
+              fontWeight: { xs: 600, sm: 700 },
+              lineHeight: 1.1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              mx: { xs: 0.5, sm: 1 }
+            }}
+          >
+            {/* Show shorter title on mobile */}
+            <Box component="span" sx={{ display: { xs: 'block', sm: 'none' } }}>🏰 Hive</Box>
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'block' } }}>🏰 NarrativeHive</Box>
           </Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            {/* Test 0-6 buttons (admin only) */}
-            {isAdmin && [0, 1, 2, 3, 4, 5, 6].map((testIndex) => (
-              <Button
-                key={testIndex}
-                size="small"
-                variant="contained"
-                color={testIndex === 0 ? "primary" : "secondary"}
-                onClick={async () => {
+          <Stack 
+            direction="row" 
+            spacing={{ xs: 0.25, sm: 1 }} 
+            alignItems="center"
+            sx={{
+              '& .MuiButton-root': {
+                minWidth: { xs: 'auto', sm: '64px' },
+                px: { xs: 0.5, sm: 1.5 }
+              },
+              '& .MuiIconButton-root': {
+                padding: { xs: '4px', sm: '8px' }
+              }
+            }}
+          >
+            {/* Test 0-6 buttons (admin only) - Hide on extra small screens */}
+            {isAdmin && (
+              <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 0.5 }}>
+                {[0, 1, 2, 3, 4, 5, 6].map((testIndex) => (
+                  <Button
+                    key={testIndex}
+                    size="small"
+                    variant="contained"
+                    color={testIndex === 0 ? "primary" : "secondary"}
+                    sx={{ 
+                      minWidth: { sm: '40px', md: '50px' },
+                      fontSize: { sm: '0.75rem', md: '0.875rem' }
+                    }}
+                    onClick={async () => {
                   try {
                     const uid = await ensureUserId();
                     
@@ -1179,78 +1371,326 @@ const MedievalGameContent: React.FC = () => {
               >
                 Test {testIndex}
               </Button>
-            ))}
-            {/* Study timer & message count */}
+                ))}
+              </Box>
+            )}
+            
+            {/* Debug button for final comparison questionnaire */}
+            {isAdmin && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                onClick={() => {
+                  console.log('[DEBUG] Triggering final comparison questionnaire');
+                  showQuestionnaire(StudyPhase.FINAL_COMPARE);
+                }}
+              >
+                Test Final Survey
+              </Button>
+            )}
+            
+            {/* Study timer & message count - Show on all screens */}
             {userProgress && (userProgress.currentPhase === StudyPhase.SESSION_1 || userProgress.currentPhase === StudyPhase.SESSION_2) && (
               <Chip
                 size="small"
                 color="info"
-                label={`Study: ${userProgress.currentPhase === StudyPhase.SESSION_1 ? 'Session 1' : 'Session 2'} • ${Math.floor(elapsedSeconds/60)}:${String(elapsedSeconds%60).padStart(2,'0')} • ${userMsgCount} msgs`}
+                label={`${userProgress.currentPhase === StudyPhase.SESSION_1 ? 'S1' : 'S2'} • ${Math.floor(elapsedSeconds/60)}:${String(elapsedSeconds%60).padStart(2,'0')}/${MIN_TEST_MINUTES}m`}
+                sx={{ 
+                  fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                  height: { xs: '24px', sm: '28px' }
+                }}
               />
             )}
             {isFastMode && (
-              <Chip size="small" color="success" variant="outlined" label="Fast mode" />
+              <Chip 
+                size="small" 
+                color="success" 
+                variant="outlined" 
+                label="Fast"
+                sx={{ 
+                  fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                  height: { xs: '24px', sm: '28px' }
+                }}
+              />
             )}
 
             {sessionId && (
-            <Stack direction="row" spacing={1} alignItems="center" className="mr-2">
-                {/* Show user id (short) */}
-                <Chip size="small" variant="outlined" color="default" label={`User: ${currentUserId ? currentUserId.replace('user', '') : 'unknown'}`} />
+            <Stack 
+              direction="row" 
+              spacing={{ xs: 0.25, sm: 1 }} 
+              alignItems="center" 
+              sx={{ mr: { xs: 0.5, sm: 2 } }}
+            >
+                {/* Show user id (short) - Show on all screens but compact on mobile */}
+                <Chip 
+                  size="small" 
+                  variant="outlined" 
+                  color="default" 
+                  label={`${currentUserId ? currentUserId.replace('user', '') : 'U'}`}
+                  sx={{ 
+                    fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                    height: { xs: '22px', sm: '28px' },
+                    '& .MuiChip-label': {
+                      px: { xs: 0.5, sm: 1 }
+                    }
+                  }}
+                />
                 {playerNPC && (
-                  <Chip size="small" color="primary" label={`Playing as: ${playerNPC.name}`} />
+                  <Chip 
+                    size="small" 
+                    color="primary" 
+                    label={playerNPC.name}
+                    sx={{ 
+                      maxWidth: { xs: '60px', sm: 'none' },
+                      fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                      height: { xs: '22px', sm: '28px' },
+                      '& .MuiChip-label': {
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        px: { xs: 0.5, sm: 1 }
+                      }
+                    }}
+                  />
                 )}
-                <Button size="medium" variant="outlined" color='secondary' onClick={() => setShowGuide(true)}>Guide</Button>
+                {/* Session ID - Show on all screens but very compact on mobile */}
                 <Tooltip title={sessionName ? `Session: ${sessionName}` : 'Session ID'}>
                   <Chip
                     size="small"
-                    label={`ID: ${String(sessionId)}`}
+                    label={String(sessionId).slice(-4)} // Show last 4 characters on mobile
                     variant="outlined"
                     color="default"
+                    sx={{ 
+                      fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                      height: { xs: '22px', sm: '28px' },
+                      maxWidth: { xs: '50px', sm: '100px' },
+                      '& .MuiChip-label': {
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        px: { xs: 0.5, sm: 1 }
+                      }
+                    }}
                   />
                 </Tooltip>
+                <Button 
+                  size="small"
+                  variant="outlined" 
+                  color='secondary' 
+                  onClick={() => setShowGuide(true)}
+                  sx={{ 
+                    fontSize: { xs: '0.625rem', sm: '0.875rem' },
+                    minWidth: { xs: '32px', sm: '64px' },
+                    px: { xs: 0.5, sm: 1.5 },
+                    height: { xs: '24px', sm: '32px' }
+                  }}
+                >
+                  {/* Show just "?" on mobile */}
+                  <Box component="span" sx={{ display: { xs: 'block', sm: 'none' } }}>?</Box>
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'block' } }}>Guide</Box>
+                </Button>
                 <Tooltip title="Rename session">
                   <span>
-                    <IconButton color="inherit" size="small" onClick={handleRenameSession}>
+                    <IconButton 
+                      color="inherit" 
+                      size="small" 
+                      onClick={handleRenameSession}
+                      sx={{ 
+                        display: { xs: 'none', sm: 'inline-flex' },
+                        p: { sm: '4px' }
+                      }}
+                    >
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </span>
                 </Tooltip>
               </Stack>
             )}
-            <IconButton 
-              color="inherit" 
-              onClick={() => setCharacterCreationOpen(true)}
-              title="Create Character"
-              className="hover:scale-110 transition-transform"
-              size="small"
-            >
-              <PersonOutlinedIcon />
-            </IconButton>
-            {/* Load Session removed for user flow */}
-            <IconButton 
-              color="inherit" 
-              onClick={() => setAdminPanelOpen(true)}
-              title="Admin Panel"
-              className="hover:scale-110 transition-transform"
-              size="small"
-            >
-              <SettingsOutlinedIcon />
-            </IconButton>
+            {/* Create Character - Admin only */}
+            {isAdmin && (
+              <IconButton 
+                color="inherit" 
+                onClick={() => setCharacterCreationOpen(true)}
+                title="Create Character"
+                className="hover:scale-110 transition-transform"
+                size="small"
+                sx={{ 
+                  padding: { xs: '4px', sm: '8px' },
+                  minWidth: { xs: '36px', sm: '40px' },
+                  minHeight: { xs: '36px', sm: '40px' },
+                  '& .MuiSvgIcon-root': { fontSize: { xs: '1.1rem', sm: '1.5rem' } }
+                }}
+              >
+                <PersonOutlinedIcon />
+              </IconButton>
+            )}
+            {/* Admin Panel - Admin only */}
+            {isAdmin && (
+              <IconButton 
+                color="inherit" 
+                onClick={() => setAdminPanelOpen(true)}
+                title="Admin Panel"
+                className="hover:scale-110 transition-transform"
+                size="small"
+                sx={{ 
+                  padding: { xs: '4px', sm: '8px' },
+                  minWidth: { xs: '36px', sm: '40px' },
+                  minHeight: { xs: '36px', sm: '40px' },
+                  '& .MuiSvgIcon-root': { fontSize: { xs: '1.1rem', sm: '1.5rem' } }
+                }}
+              >
+                <SettingsOutlinedIcon />
+              </IconButton>
+            )}
           </Stack>
         </Toolbar>
       </AppBar>
 
+      {/* Mobile Info Bar - Additional info for mobile users */}
+      {sessionId && (
+        <Box 
+          sx={{ 
+            display: { xs: 'flex', md: 'none' },
+            backgroundColor: 'background.paper',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            px: { xs: 1, sm: 2 },
+            py: 0.5,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            minHeight: '28px',
+            maxHeight: '32px',
+            overflow: 'hidden',
+            flexWrap: 'nowrap'
+          }}
+        >
+          <Stack 
+            direction="row" 
+            spacing={{ xs: 0.5, sm: 1 }} 
+            alignItems="center"
+            sx={{ 
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              minWidth: 0,
+              flex: 1
+            }}
+          >
+            {/* User ID */}
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ 
+                fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                whiteSpace: 'nowrap'
+              }}
+            >
+              U:{currentUserId ? currentUserId.replace('user', '') : '?'}
+            </Typography>
+            {/* Session info */}
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              sx={{ 
+                fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                whiteSpace: 'nowrap'
+              }}
+            >
+              S:{sessionName || `${String(sessionId).slice(-4)}`}
+            </Typography>
+            {/* Study progress */}
+            {userProgress && (userProgress.currentPhase === StudyPhase.SESSION_1 || userProgress.currentPhase === StudyPhase.SESSION_2) && (
+              <Typography 
+                variant="caption" 
+                color="info.main" 
+                sx={{ 
+                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {userProgress.currentPhase === StudyPhase.SESSION_1 ? 'S1' : 'S2'}:{Math.floor(elapsedSeconds/60)}:{String(elapsedSeconds%60).padStart(2,'0')}/{MIN_TEST_MINUTES}m
+              </Typography>
+            )}
+          </Stack>
+          <Stack 
+            direction="row" 
+            spacing={{ xs: 0.25, sm: 0.5 }} 
+            alignItems="center"
+            sx={{
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              minWidth: 0
+            }}
+          >
+            {playerNPC && (
+              <Typography 
+                variant="caption" 
+                color="primary.main" 
+                sx={{ 
+                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                  whiteSpace: 'nowrap',
+                  maxWidth: { xs: '60px', sm: '80px' },
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                P:{playerNPC.name}
+              </Typography>
+            )}
+            {talkTargetNPC && talkTargetNPC.id !== playerNPC?.id && (
+              <Typography 
+                variant="caption" 
+                color="secondary.main" 
+                sx={{ 
+                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                  whiteSpace: 'nowrap',
+                  maxWidth: { xs: '60px', sm: '80px' },
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                →{talkTargetNPC.name}
+              </Typography>
+            )}
+            {/* Message count */}
+            {userMsgCount > 0 && (
+              <Typography 
+                variant="caption" 
+                color="text.secondary" 
+                sx={{ 
+                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {userMsgCount}/{MIN_TEST_MESSAGES}m
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+      )}
+
       <Box 
         className="flex-1 flex flex-col overflow-hidden"
-        sx={{ height: 'calc(100vh - 64px)' }} // Account for AppBar height
+        sx={{ 
+          height: { 
+            xs: sessionId ? 'calc(100vh - 80px)' : 'calc(100vh - 48px)', // Account for AppBar + mobile info bar
+            sm: sessionId ? 'calc(100vh - 96px)' : 'calc(100vh - 64px)',
+            md: 'calc(100vh - 64px)' // Desktop doesn't have mobile info bar
+          },
+          minHeight: { 
+            xs: sessionId ? 'calc(100vh - 80px)' : 'calc(100vh - 48px)',
+            sm: sessionId ? 'calc(100vh - 96px)' : 'calc(100vh - 64px)',
+            md: 'calc(100vh - 64px)'
+          }
+        }}
       >
         {/* (Removed) Top filters on desktop; mobile filters remain within layout */}
 
         {/* Main Game Layout */}
         <Box 
-          className="flex-1 grid gap-2 px-4 overflow-hidden"
+          className="flex-1 grid overflow-hidden"
           sx={{
-            pb: { xs: '260px', md: 2 },
+            pb: { xs: '20px', md: 2 }, // Much reduced mobile padding since NPC panel is now inside grid
+            px: { xs: 2, sm: 3, md: 4 },
+            gap: { xs: 1, sm: 1.5, md: 2 },
             height: '100%',
             gridTemplateColumns: {
               xs: '1fr', // Mobile: single column
@@ -1260,8 +1700,8 @@ const MedievalGameContent: React.FC = () => {
               xl: '400px 1fr' // Extra large: wider sidebar
             },
             gridTemplateRows: {
-              xs: 'auto minmax(0, 1fr)', // Mobile: controls, chat (with min height 0)
-              sm: 'auto minmax(0, 1fr)', // Small: same as mobile
+              xs: 'auto minmax(0, 1fr) auto', // Mobile: controls, chat, npcs
+              sm: 'auto minmax(0, 1fr) auto', // Small: same as mobile
               md: '1fr', // Medium+: single row
               lg: '1fr',
               xl: '1fr'
@@ -1270,10 +1710,12 @@ const MedievalGameContent: React.FC = () => {
               xs: `
                 "controls"
                 "chat"
+                "npcs"
               `,
               sm: `
                 "controls"
                 "chat"
+                "npcs"
               `,
               md: `
                 "sidebar main"
@@ -1383,11 +1825,11 @@ const MedievalGameContent: React.FC = () => {
             sx={{ 
               gridArea: { xs: 'chat', md: 'main' },
               height: '100%',
-              minHeight: { xs: '0', md: '0' },
-              maxHeight: { xs: 'calc(100vh - 200px)', md: '100%' }, // Limit mobile height
+              minHeight: { xs: '300px', md: '0' }, // Ensure minimum height on mobile
+              maxHeight: { xs: 'none', md: '100%' }, // Remove max height restriction on mobile
               display: 'flex',
               flexDirection: 'column',
-              gap: 2,
+              gap: { xs: 1, md: 2 },
               overflow: 'hidden'
             }}
           >
@@ -1422,31 +1864,33 @@ const MedievalGameContent: React.FC = () => {
                 />
               </Box>
             </Box>
+            
+            {/* Mobile NPC Panel (only visible on mobile) - Now in grid area */}
+            <Box 
+              sx={{ 
+                gridArea: 'npcs',
+                display: { xs: 'block', md: 'none' },
+                height: { xs: '180px', sm: '200px' },
+                overflow: 'hidden'
+              }}
+            >
+              {sessionId ? (
+                <NPCPanel
+                  npcs={npcs}
+                  selectedNPCId={selectedNPCId}
+                  onNPCSelect={setSelectedNPCId}
+                  onNPCDoubleClick={handleNPCDoubleClick}
+                  onPlayAs={handlePlayAs}
+                  onTalk={handleTalk}
+                  activePlayerNpcId={playerNPC?.id || null}
+                  activeTalkTargetId={talkTargetNPC?.id || null}
+                />
+              ) : null}
+            </Box>
           </Box>
         </Box>
 
-        {/* Mobile NPC Panel (only visible on mobile) */}
-        <Box 
-          sx={{ 
-            display: { xs: 'block', md: 'none' },
-            height: '250px',
-            px: 4,
-            pb: 2
-          }}
-        >
-          {sessionId ? (
-            <NPCPanel
-              npcs={npcs}
-              selectedNPCId={selectedNPCId}
-              onNPCSelect={setSelectedNPCId}
-              onNPCDoubleClick={handleNPCDoubleClick}
-              onPlayAs={handlePlayAs}
-              onTalk={handleTalk}
-              activePlayerNpcId={playerNPC?.id || null}
-              activeTalkTargetId={talkTargetNPC?.id || null}
-            />
-          ) : null}
-        </Box>
+
       </Box>
 
       {/* Modals */}
@@ -1469,7 +1913,7 @@ const MedievalGameContent: React.FC = () => {
           setShowGuide(false);
           try { localStorage.setItem('guide_dismissed', '1'); } catch {}
           if (userProgress && userProgress.currentPhase === StudyPhase.SESSION_1 && currentTestIndex === null) {
-            startTest(0);
+            showLoaderAndExecute('Starting Test 1 of 4...', () => startTest(0));
           }
         }}
         content={guideContent || (settings as any)?.prompts?.experimentGuide}
@@ -1492,6 +1936,83 @@ const MedievalGameContent: React.FC = () => {
         allowClose={!currentQuestionnaire?.required || 
           (userProgress?.completedQuestionnaires.includes(currentQuestionnaire?.id || '') || false)}
       />
+
+      {/* Loading Modal for Test Transitions */}
+      <Modal
+        open={showTestLoader}
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          sx: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)'
+          }
+        }}
+        disableEscapeKeyDown
+        disableAutoFocus
+        disableEnforceFocus
+        disableRestoreFocus
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            bgcolor: 'background.paper',
+            border: '2px solid',
+            borderColor: 'primary.main',
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 4,
+            textAlign: 'center',
+            minWidth: { xs: 280, sm: 400 },
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+            color: 'primary.contrastText'
+          }}
+        >
+          <CircularProgress 
+            size={60} 
+            sx={{ 
+              color: 'primary.main',
+              mb: 3
+            }} 
+          />
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontFamily: 'Cinzel, serif',
+              fontWeight: 600,
+              mb: 2,
+              color: 'primary.main',
+              fontSize: { xs: '1.1rem', sm: '1.25rem' }
+            }}
+          >
+            {loaderMessage}
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              fontFamily: 'Cormorant Garamond, serif',
+              opacity: 0.9,
+              fontSize: '1rem',
+              mb: 2
+            }}
+          >
+            Preparing your next session...
+          </Typography>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              fontFamily: 'Cormorant Garamond, serif',
+              opacity: 0.7,
+              fontSize: '0.85rem',
+              fontStyle: 'italic'
+            }}
+          >
+            You will participate in 4 different tests total
+          </Typography>
+        </Box>
+      </Modal>
     </Box>
   );
 };
