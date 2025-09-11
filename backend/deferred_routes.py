@@ -982,7 +982,10 @@ def create_deferred_blueprint(
 
     @bp.post(f"{api_prefix}/sessions")
     def create_session_alias():
-        """Create a new session. Optionally accepts session_id, current_day, time_period; stores payload under game_settings.client_state."""
+        """Create a new session. Optionally accepts session_id, current_day, time_period; stores payload under game_settings.client_state.
+
+        If a user_id is provided, also stamp it into game_settings.experiment.user_id so ownership checks work.
+        """
         data = request.get_json(silent=True) or {}
         session_id = data.get("session_id")
         try:
@@ -990,6 +993,18 @@ def create_deferred_blueprint(
             # Merge frontend payload under client_state for traceability
             gs = session.game_settings or {}
             gs["client_state"] = data
+
+            # If caller provided a user_id, ensure experiment metadata carries it
+            try:
+                uid = data.get("user_id")
+                if uid:
+                    exp = (gs.get('experiment') or {}) if isinstance(gs, dict) else {}
+                    exp.setdefault('type', 'user')
+                    exp['user_id'] = uid
+                    gs['experiment'] = exp
+            except Exception:
+                pass
+
             session.game_settings = gs
 
             # Optional immediate updates

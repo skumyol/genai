@@ -1816,9 +1816,17 @@ def set_active_session(user_id: str):
         if not session:
             return jsonify({"error": "Session not found"}), 404
             
-        # Check if session belongs to user
+        # Check if session belongs to user (be tolerant of legacy/session-id based ownership)
         exp = (session.game_settings or {}).get('experiment') or {}
-        if exp.get('user_id') != user_id:
+        belongs = str(exp.get('user_id') or '') == str(user_id)
+        # Fallback: infer ownership from session_id prefix (e.g., userX_test_Y)
+        if not belongs:
+            try:
+                if str(getattr(session, 'session_id', '')).startswith(f"{user_id}_"):
+                    belongs = True
+            except Exception:
+                pass
+        if not belongs:
             return jsonify({"error": "Session does not belong to user"}), 403
         
         # Set as active session
