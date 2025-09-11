@@ -274,3 +274,7 @@ backend/metrics/deep_analysis/latest_all6/plots/plot_distinct_2.png
 backend/metrics/deep_analysis/latest_all6/plots/plot_overhead_latency_delta.png
 backend/metrics/deep_analysis/latest_all6/plots/plot_tokens_per_sec_pure.png
 backend/metrics/deep_analysis/latest_all6/plots/plot_ttr.png
+backend/utils/questionnaire_questionnaire_final_compare.csv
+backend/utils/questionnaire_questionnaire_pre_game.csv
+backend/utils/questionnaire_questionnaire_session_1.csv
+backend/utils/questionnaire_questionnaire_session_2.csv
